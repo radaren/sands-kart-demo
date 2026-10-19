@@ -1,0 +1,22 @@
+# Godot 4 caches / imports
+.godot/
+*.import
+.import/
+# exported builds
+export/
+build/
+builds/
+*.x86_64
+*.exe
+*.pck
+*.apk
+*.dmg
+export_presets.cfg
+# Godot engine binaries / archives
+Godot_v*
+*.zip
+# misc
+.DS_Store
+*.tmp
+*.log
+.env
