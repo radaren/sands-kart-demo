@@ -1,0 +1,77 @@
+{
+ "note": "Cloud low-poly assets already in assets/props_raw. Skipped as off-theme: cactus_4 (candle), obelisk (safety cone), pyramid (house wall peak).",
+ "props": {
+  "cactus_a": {
+   "path": "res://assets/props_raw/cactus_1/model.glb",
+   "scale": 4.5,
+   "zone": "dunes",
+   "source": "SM_Env_Cactus_02"
+  },
+  "cactus_b": {
+   "path": "res://assets/props_raw/cactus_2/model.glb",
+   "scale": 3.6,
+   "zone": "dunes",
+   "source": "SM_Env_Cactus_01"
+  },
+  "cactus_c": {
+   "path": "res://assets/props_raw/cactus_3/model.glb",
+   "scale": 5.0,
+   "zone": "dunes",
+   "source": "SM_Env_Cactus_03"
+  },
+  "cactus_e": {
+   "path": "res://assets/props_raw/cactus_5/model.glb",
+   "scale": 2.0,
+   "zone": "dunes",
+   "source": "SM_Env_Vine_Spikes_02"
+  },
+  "cactus_f": {
+   "path": "res://assets/props_raw/cactus_6/model.glb",
+   "scale": 2.0,
+   "zone": "dunes",
+   "source": "SM_Env_Vine_Spikes_01"
+  },
+  "palm_a": {
+   "path": "res://assets/props_raw/palm_1/model.glb",
+   "scale": 1.2,
+   "zone": "town",
+   "source": "SM_Env_PalmTree_04"
+  },
+  "palm_b": {
+   "path": "res://assets/props_raw/palm_2/model.glb",
+   "scale": 0.75,
+   "zone": "any",
+   "source": "SM_Env_PalmTree_Tall_02"
+  },
+  "palm_c": {
+   "path": "res://assets/props_raw/palm_3/model.glb",
+   "scale": 0.8,
+   "zone": "any",
+   "source": "SM_Env_Tree_Big_03"
+  },
+  "palm_d": {
+   "path": "res://assets/props_raw/palm_4/model.glb",
+   "scale": 1.2,
+   "zone": "town",
+   "source": "SM_Env_Tree_01"
+  },
+  "rock_a": {
+   "path": "res://assets/props_raw/rock_1/model.glb",
+   "scale": 2.2,
+   "zone": "any",
+   "source": "SM_Env_Ruin_03"
+  },
+  "rock_b": {
+   "path": "res://assets/props_raw/rock_2/model.glb",
+   "scale": 2.6,
+   "zone": "any",
+   "source": "SM_Env_Ruin_01"
+  },
+  "rock_c": {
+   "path": "res://assets/props_raw/rock_3/model.glb",
+   "scale": 0.55,
+   "zone": "dunes",
+   "source": "SM_Env_Rock_Cliff_01"
+  }
+ }
+}

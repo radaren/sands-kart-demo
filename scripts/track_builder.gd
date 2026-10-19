@@ -658,59 +658,116 @@ func item_row_ahead(s_from: float, s_to: float) -> float:
 # ---------------------------------------------------------------------------
 # scenery
 # ---------------------------------------------------------------------------
+## Town = from the start gate to just past the first ramp (飞跃进凹地);
+## everything after is open dunes. Manifest entries carry a `scale` (the cloud
+## models are authored at very different sizes) and a `zone` (town/dunes/any).
+func town_end() -> float:
+	return (track.ramps[0] + 60.0) if track.ramps.size() > 0 else track.length * 0.25
+
+
 func _build_scenery() -> void:
 	var grape := _load_manifest("res://data/grape_props.json")
 	var cloud := _load_manifest("res://data/assets_manifest.json")
-	var near_pool: Array = []
+	var town_pool: Array = []
+	var dune_pool: Array = []
 	var far_pool: Array = []
 	var near_keys := ["mud_house_a", "mud_house_b", "mud_house_c", "ruin_pillar_a", "ruin_pillar_b",
-			"column_broken", "obelisk", "arch_ruin", "sand_rock_a", "sand_rock_b",
+			"column_broken", "obelisk", "sand_rock_a", "sand_rock_b",
 			"cactus_a", "cactus_b", "cactus_c", "cactus_d", "cactus_e", "cactus_f",
 			"palm_a", "palm_b", "palm_c", "palm_d", "rock_a", "rock_b", "rock_c"]
 	for key in near_keys:
-		var packed := _manifest_scene(key, grape, cloud)
-		if packed != null:
-			near_pool.append(packed)
-	for key in ["pyramid", "obelisk", "sand_rock_a", "rock_a", "rock_b", "mud_house_b"]:
-		var packed := _manifest_scene(key, grape, cloud)
-		if packed != null:
-			far_pool.append({"key": key, "scene": packed})
-	if near_pool.is_empty():
+		var entry := _manifest_entry(key, grape, cloud)
+		if entry.is_empty():
+			continue
+		var zone := str(entry.get("zone", "any"))
+		# houses are weighted up in town, cacti/rocks in the dunes
+		var weight := 3 if key.begins_with("mud_house") else (2 if key.begins_with("cactus") else 1)
+		for w in weight:
+			if zone != "dunes":
+				town_pool.append(entry)
+			if zone != "town":
+				dune_pool.append(entry)
+	for key in ["pyramid", "obelisk", "sand_rock_a", "rock_a", "rock_b", "rock_c", "mud_house_b"]:
+		var entry := _manifest_entry(key, grape, cloud)
+		if not entry.is_empty():
+			far_pool.append(entry.merged({"key": key}))
+	if town_pool.is_empty() and dune_pool.is_empty():
 		push_warning("TrackBuilder: no scenery assets found, using blockout rocks")
 		for k in 3:
-			near_pool.append(_blockout_rock(k))
+			dune_pool.append({"scene": _blockout_rock(k), "scale": 1.0})
+	if town_pool.is_empty():
+		town_pool = dune_pool
+	if dune_pool.is_empty():
+		dune_pool = town_pool
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
+	var t_end := town_end()
 	var s := 20.0
 	var side := 1.0
 	while s < track.length - 20.0:
-		var count := rng.randi_range(1, 2)
+		var in_town := s < t_end
+		var pool: Array = town_pool if in_town else dune_pool
+		var count := rng.randi_range(1, 3) if in_town else rng.randi_range(1, 2)
 		for k in count:
 			var at := s + k * 7.0
-			var lateral := side * rng.randf_range(12.0, 30.0)
+			var lateral := side * (rng.randf_range(11.5, 20.0) if in_town else rng.randf_range(12.0, 34.0))
 			var pos := track.position_at(at) + track.right_at(at) * lateral
 			var near := nearest_track(pos.x, pos.z, 2)
 			if float(near["dist"]) < 11.0:
 				continue
 			pos.y = terrain_height(pos.x, pos.z) - 0.1
-			_spawn_prop(near_pool[rng.randi_range(0, near_pool.size() - 1)], pos, rng, 0.9, 1.25)
+			var entry: Dictionary = pool[rng.randi_range(0, pool.size() - 1)]
+			var node := _spawn_prop(entry["scene"], pos, rng, 0.9 * float(entry["scale"]), 1.25 * float(entry["scale"]))
+			if node != null and in_town and str(entry.get("key", "")).begins_with("mud_house"):
+				# face the road
+				var to_road := track.position_at(at) - pos
+				node.rotation.y = atan2(to_road.x, to_road.z)
 		side = -side
-		s += rng.randf_range(22.0, 38.0)
-	_place_backdrop(far_pool if not far_pool.is_empty() else [], near_pool, rng)
+		s += rng.randf_range(14.0, 22.0) if in_town else rng.randf_range(22.0, 38.0)
+	_place_town_arches(grape, cloud)
+	_place_backdrop(far_pool, dune_pool, rng)
 
 
-func _manifest_scene(key: String, grape: Dictionary, cloud: Dictionary) -> PackedScene:
+func _place_town_arches(grape: Dictionary, cloud: Dictionary) -> void:
+	var entry := _manifest_entry("arch_ruin", grape, cloud)
+	if entry.is_empty():
+		return
+	var t_end := town_end()
+	for f in [0.18, 0.55, 0.92]:
+		var s := lerpf(track.start_offset + 60.0, t_end - 40.0, f)
+		var node := (entry["scene"] as PackedScene).instantiate() as Node3D
+		if node == null:
+			continue
+		if "span" in node:
+			node.set("span", track.road_width + 3.0)
+		var t := track.tangent_at(s)
+		node.transform = Transform3D(Basis.looking_at(t, Vector3.UP), track.position_at(s) - Vector3.UP * 0.2)
+		node.name = "TownArch"
+		add_child(node)
+
+
+func _manifest_entry(key: String, grape: Dictionary, cloud: Dictionary) -> Dictionary:
 	var entry: Dictionary = {}
 	if grape.has(key):
 		entry = grape[key]
 	elif cloud.has(key):
 		entry = cloud[key]
 	if entry.is_empty():
-		return null
+		return {}
 	var path := str(entry.get("path", ""))
 	if path.is_empty() or not ResourceLoader.exists(path):
+		return {}
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return {}
+	return {"key": key, "scene": packed, "scale": float(entry.get("scale", 1.0)), "zone": str(entry.get("zone", "any"))}
+
+
+func _manifest_scene(key: String, grape: Dictionary, cloud: Dictionary) -> PackedScene:
+	var entry := _manifest_entry(key, grape, cloud)
+	if entry.is_empty():
 		return null
-	return load(path) as PackedScene
+	return entry["scene"] as PackedScene
 
 
 func _spawn_prop(packed: PackedScene, pos: Vector3, rng: RandomNumberGenerator, lo: float, hi: float) -> Node3D:
@@ -731,7 +788,7 @@ func _place_backdrop(far_pool: Array, near_pool: Array, rng: RandomNumberGenerat
 	for p in track.points:
 		center += p
 	center /= float(track.points.size())
-	# a couple of pyramids on the horizon if the cloud asset is available
+	# a couple of pyramids on the horizon
 	for entry: Dictionary in far_pool:
 		if entry["key"] != "pyramid":
 			continue
@@ -742,6 +799,8 @@ func _place_backdrop(far_pool: Array, near_pool: Array, rng: RandomNumberGenerat
 			var node := _spawn_prop(entry["scene"], pos, rng, 2.2 - k * 0.4, 2.4 - k * 0.4)
 			if node != null:
 				node.rotation.y = rng.randf_range(0, PI)
+	if near_pool.is_empty():
+		return
 	for k in 18:
 		var ang := rng.randf_range(-PI, PI)
 		var dist := rng.randf_range(230.0, 440.0)
@@ -749,7 +808,8 @@ func _place_backdrop(far_pool: Array, near_pool: Array, rng: RandomNumberGenerat
 		if float(nearest_track(pos.x, pos.z, 2)["dist"]) < 40.0:
 			continue
 		pos.y = terrain_height(pos.x, pos.z) - 0.3
-		_spawn_prop(near_pool[rng.randi_range(0, near_pool.size() - 1)], pos, rng, 1.8, 2.8)
+		var entry: Dictionary = near_pool[rng.randi_range(0, near_pool.size() - 1)]
+		_spawn_prop(entry["scene"], pos, rng, 1.8 * float(entry["scale"]), 2.8 * float(entry["scale"]))
 
 
 func _load_manifest(path: String) -> Dictionary:

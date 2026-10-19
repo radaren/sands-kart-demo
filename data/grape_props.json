@@ -1,0 +1,71 @@
+{
+ "note": "Grape-generated architecture. Grape is unavailable here, so these point at procedural stand-ins; swap 'path' to a Grape .scn to upgrade.",
+ "props": {
+  "mud_house_a": {
+   "path": "res://scenes/props/mud_house_a.tscn",
+   "scale": 1.0,
+   "zone": "town",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "mud_house_b": {
+   "path": "res://scenes/props/mud_house_b.tscn",
+   "scale": 1.0,
+   "zone": "town",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "mud_house_c": {
+   "path": "res://scenes/props/mud_house_c.tscn",
+   "scale": 1.0,
+   "zone": "town",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "ruin_pillar_a": {
+   "path": "res://scenes/props/ruin_pillar_a.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "ruin_pillar_b": {
+   "path": "res://scenes/props/ruin_pillar_b.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "column_broken": {
+   "path": "res://scenes/props/column_broken.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "obelisk": {
+   "path": "res://scenes/props/obelisk.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "arch_ruin": {
+   "path": "res://scenes/props/arch_ruin.tscn",
+   "scale": 1.0,
+   "zone": "town",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "pyramid": {
+   "path": "res://scenes/props/pyramid.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "sand_rock_a": {
+   "path": "res://scenes/props/sand_rock_a.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  },
+  "sand_rock_b": {
+   "path": "res://scenes/props/sand_rock_b.tscn",
+   "scale": 1.0,
+   "zone": "any",
+   "source": "procedural stand-in for Grape (scripts/props/procedural_prop.gd)"
+  }
+ }
+}
