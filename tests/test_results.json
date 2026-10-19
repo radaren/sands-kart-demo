@@ -1,0 +1,127 @@
+{
+  "all_pass": true,
+  "godot": "4.7.2-stable (official)",
+  "results": [
+    {
+      "detail": {
+        "hud_center": "3",
+        "rank_text": "1/6",
+        "speed_text": "0 km/h",
+        "state": 0
+      },
+      "pass": true,
+      "test": "countdown_shows_3"
+    },
+    {
+      "detail": {
+        "max_speed_cfg": 30.0,
+        "speed_kmh": 96.6,
+        "start_boost": true,
+        "velocity_mps": 26.83
+      },
+      "pass": true,
+      "test": "super_start_speed_gt_15"
+    },
+    {
+      "detail": {
+        "boost_kinds": {
+          "mini": 2,
+          "pad": 1,
+          "start": 1
+        },
+        "drift_time": 0.78,
+        "mini_boosts": 1,
+        "mini_window_after_release": 0.33,
+        "speed_after": 40.0,
+        "speed_before": 32.95,
+        "was_drifting": true
+      },
+      "pass": true,
+      "test": "drift_mini_boost"
+    },
+    {
+      "detail": {
+        "nitro_active": false,
+        "picked": "cloud",
+        "progress_at_pickup": 296.5,
+        "shield": false,
+        "used_log": [
+          {
+            "item": "cloud",
+            "kart": "Player",
+            "time": 7.16666666666678
+          }
+        ]
+      },
+      "pass": true,
+      "test": "item_pickup_and_use"
+    },
+    {
+      "detail": {
+        "after": [
+          "Player",
+          "AI_3",
+          "AI_5",
+          "AI_4",
+          "AI_2",
+          "AI_1"
+        ],
+        "ai_moving": 5,
+        "before": [
+          "Player",
+          "AI_3",
+          "AI_4",
+          "AI_5",
+          "AI_1",
+          "AI_2"
+        ],
+        "player_rank": 1,
+        "rubber": {
+          "AI_1": 1.0,
+          "AI_2": 1.0,
+          "AI_3": 1.0,
+          "AI_4": 1.0,
+          "AI_5": 1.0,
+          "Player": 1.0
+        }
+      },
+      "pass": true,
+      "test": "rankings_update"
+    },
+    {
+      "detail": {
+        "freeze_after_R": 2.98,
+        "wrong_way_time_after_R": 0.0,
+        "wrong_way_time_before_R": 0.83
+      },
+      "pass": true,
+      "test": "wrong_way_and_respawn"
+    },
+    {
+      "detail": {
+        "boost_kinds": {
+          "air": 1,
+          "landing": 1,
+          "mini": 6,
+          "pad": 5,
+          "start": 1
+        },
+        "items_used_total": 27,
+        "player_finish": "1:42.67",
+        "player_hits": 2,
+        "race_finished": true,
+        "results": [
+          "1 绿洲 1:38.30",
+          "2 阿蓝 1:39.43",
+          "3 小黄 1:39.85",
+          "4 橘子 1:40.58",
+          "5 紫电 1:40.73",
+          "6 你 1:42.67"
+        ],
+        "sim_seconds": 102.7
+      },
+      "pass": true,
+      "test": "race_finished_and_results"
+    }
+  ]
+}
