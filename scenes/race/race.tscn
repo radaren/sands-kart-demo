@@ -1,0 +1,35 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/track/sands_track.tscn" id="1_track"]
+[ext_resource type="Script" path="res://scripts/race_manager.gd" id="2_rm"]
+[ext_resource type="Script" path="res://scripts/item_system.gd" id="3_items"]
+[ext_resource type="Script" path="res://scripts/chase_camera.gd" id="4_cam"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/results.tscn" id="6_res"]
+[ext_resource type="Script" path="res://scripts/race_audio.gd" id="7_audio"]
+[ext_resource type="Script" path="res://scripts/race_environment.gd" id="8_env"]
+
+[node name="Race" type="Node3D"]
+
+[node name="Environment" type="Node3D" parent="."]
+script = ExtResource("8_env")
+
+[node name="SandsTrack" parent="." instance=ExtResource("1_track")]
+
+[node name="RaceManager" type="Node" parent="."]
+script = ExtResource("2_rm")
+
+[node name="ItemSystem" type="Node3D" parent="."]
+script = ExtResource("3_items")
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 10)
+current = true
+script = ExtResource("4_cam")
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+
+[node name="Results" parent="." instance=ExtResource("6_res")]
+
+[node name="RaceAudio" type="Node" parent="."]
+script = ExtResource("7_audio")
