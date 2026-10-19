@@ -1,0 +1,41 @@
+[remap]
+
+importer="streamed_texture_2d"
+type="StreamedTexture2D"
+uid="uid://dvo358ice60xh"
+path.s3tc="res://.godot/imported/model_PolygonMilitary_01_A_Normals.png-59a22612b2d685da841160f2dd81e7ee.s3tc.stex"
+metadata={
+"fast_mip_downsample": true,
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "abca6062a2051886a9ebc4dd011dcf7f"
+}
+
+[deps]
+
+source_file="res://assets/props_raw/cactus_2/model_PolygonMilitary_01_A_Normals.png"
+dest_files=["res://.godot/imported/model_PolygonMilitary_01_A_Normals.png-59a22612b2d685da841160f2dd81e7ee.s3tc.stex"]
+
+[params]
+
+compress/high_quality=false
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+roughness/mode=1
+roughness/src_normal="res://assets/props_raw/cactus_2/model_PolygonMilitary_01_A_Normals.png"
+streaming/min_lod_override=0
+streaming/max_lod_override=0
+process/source_color_space=0
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=false
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0

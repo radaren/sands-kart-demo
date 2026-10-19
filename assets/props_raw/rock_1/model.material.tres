@@ -1,0 +1,24 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cm8jpduj6606y"]
+
+[ext_resource type="Shader" uid="uid://6k08qdcgsvf" path="res://MagicLomix/Shaders/SH_StandardPBR.gdshader" id="1_8m2ub"]
+[ext_resource type="Texture2D" uid="uid://4qqvl5ow0gsp" path="res://assets/props_raw/rock_1/model_0.png" id="2_85qs6"]
+[ext_resource type="Texture2D" uid="uid://b7271inwdwd1t" path="res://assets/props_raw/rock_1/model_PolygonMilitary_01_A_Normals.png" id="3_cexsx"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_8m2ub")
+shader_parameter/uv_tiling = Vector2(1, 1)
+shader_parameter/uv_offset = Vector2(0, 0)
+shader_parameter/albedo_tex = ExtResource("2_85qs6")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/albedo_brightness = 1.0
+shader_parameter/albedo_contrast = 1.0
+shader_parameter/albedo_saturation = 1.0
+shader_parameter/normal_tex = ExtResource("3_cexsx")
+shader_parameter/normal_scale = 1.0
+shader_parameter/flip_normal_y = false
+shader_parameter/texture_mode = 1
+shader_parameter/metallic_mul = 1.0
+shader_parameter/roughness_mul = 1.0
+shader_parameter/ao_mul = 1.0
+shader_parameter/packed_format = 0

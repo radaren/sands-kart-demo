@@ -1,0 +1,41 @@
+[remap]
+
+importer="streamed_texture_2d"
+type="StreamedTexture2D"
+uid="uid://dcadm8h4e2ck3"
+path.s3tc="res://.godot/imported/model_0.png-477bad56d0c1b252652062e71ae69c17.s3tc.stex"
+metadata={
+"fast_mip_downsample": true,
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "72f7d7bbfb44566369520b6002a91e6b"
+}
+
+[deps]
+
+source_file="res://assets/props_raw/cactus_4/model_0.png"
+dest_files=["res://.godot/imported/model_0.png-477bad56d0c1b252652062e71ae69c17.s3tc.stex"]
+
+[params]
+
+compress/high_quality=false
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+roughness/mode=0
+roughness/src_normal=""
+streaming/min_lod_override=0
+streaming/max_lod_override=0
+process/source_color_space=0
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=false
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0

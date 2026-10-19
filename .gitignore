@@ -1,22 +1,7 @@
-# Godot 4 caches / imports
 .godot/
-*.import
-.import/
-# exported builds
-export/
-build/
-builds/
-*.x86_64
-*.exe
-*.pck
-*.apk
-*.dmg
-export_presets.cfg
-# Godot engine binaries / archives
-Godot_v*
-*.zip
-# misc
-.DS_Store
-*.tmp
-*.log
-.env
+# local tool caches / scratch (not part of the game)
+AssetInfo/
+_check.py
+# raw download archives (already extracted next to them)
+assets/props_raw/*.zip
+assets/props_raw/audio_src/*.zip
