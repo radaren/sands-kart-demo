@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="KartConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/kart_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+base_speed = 12.0
+drift_speed = 9.0
+nitro_bonus = 6.0
+nitro_time = 3.0
+mini_bonus = 3.0
+mini_time = 1.5
+start_bonus = 5.0
+start_time = 2.0
