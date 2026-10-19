@@ -45,5 +45,5 @@ nitro_bonus = 12.0
 nitro_time = 3.0
 pad_bonus = 10.0
 pad_time = 1.2
-respawn_freeze = 1.2
+respawn_freeze = 3.0
 shield_time = 10.0
