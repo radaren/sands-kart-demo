@@ -82,6 +82,10 @@ var stun_kind := ""
 var shield_time := 0.0
 var cloud_time := 0.0
 var items: Array[int] = []
+## Spec/test view of the 2 item slots: [item_or_null, item_or_null].
+var item_slots: Array:
+	get:
+		return [items[0] if items.size() > 0 else null, items[1] if items.size() > 1 else null]
 
 # --- stats ------------------------------------------------------------------------
 var stat_mini_boosts := 0

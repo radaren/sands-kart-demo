@@ -3,13 +3,14 @@
 [ext_resource type="Script" path="res://scripts/kart.gd" id="1_kart"]
 [ext_resource type="Resource" path="res://data/kart_config.tres" id="2_cfg"]
 
-[sub_resource type="BoxShape3D" id="Box_kart"]
-size = Vector3(1.5, 0.8, 2.5)
+[sub_resource type="CapsuleShape3D" id="Capsule_kart"]
+radius = 0.5
+height = 2.5
 
 [node name="Kart" type="CharacterBody3D"]
 script = ExtResource("1_kart")
 config = ExtResource("2_cfg")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
-shape = SubResource("Box_kart")
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.55, 0)
+shape = SubResource("Capsule_kart")
