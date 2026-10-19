@@ -140,9 +140,11 @@ func build(color: Color, driver_name: String) -> void:
 	tag.outline_size = 10
 	tag.no_depth_test = false
 	add_child(tag)
+	name_tag = tag
 
 
 var kart: Kart
+var name_tag: Label3D
 var _t := 0.0
 var _spin := 0.0
 
@@ -152,6 +154,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# name tags: hide when the camera is right on top of the kart (huge text)
+	if name_tag:
+		var cam := get_viewport().get_camera_3d()
+		name_tag.visible = cam == null or cam.global_position.distance_to(global_position) > 9.0
 	if kart == null or model == null:
 		return
 	_t += delta

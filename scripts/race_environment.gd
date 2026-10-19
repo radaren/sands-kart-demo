@@ -18,6 +18,12 @@ func _ready() -> void:
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.95, 0.84, 0.66)
 	env.fog_density = 0.0012
+	# The Compatibility renderer (Web build) has no HDR headroom: bright sky
+	# ambient + sun clip the sand to white. Use gentler values there.
+	var compat := RenderingServer.get_current_rendering_method() == "gl_compatibility"
+	if compat:
+		env.ambient_light_energy = 0.42
+		env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -25,7 +31,7 @@ func _ready() -> void:
 	sun.name = "Sun"
 	sun.rotation_degrees = Vector3(-48, -35, 0)
 	sun.light_color = Color(1.0, 0.93, 0.8)
-	sun.light_energy = 1.2
+	sun.light_energy = 0.78 if compat else 1.2
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 140.0
 	add_child(sun)

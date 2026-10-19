@@ -5,3 +5,6 @@ _check.py
 # raw download archives (already extracted next to them)
 assets/props_raw/*.zip
 assets/props_raw/audio_src/*.zip
+# exported builds
+build/
+*.pck

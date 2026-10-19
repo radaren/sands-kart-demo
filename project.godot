@@ -103,7 +103,7 @@ look_back={
 
 [gui]
 
-theme/custom_font="res://data/cjk_font.tres"
+theme/custom_font="res://assets/fonts/NotoSansSC-Bold-subset.otf"
 
 [layer_names]
 
@@ -122,6 +122,7 @@ template_version="1.0.0"
 [rendering]
 
 renderer/rendering_method.mobile="forward_plus"
+renderer/rendering_method.web="gl_compatibility"
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
 anti_aliasing/quality/msaa_3d=2
 environment/defaults/default_clear_color=Color(0.85, 0.72, 0.5, 1)

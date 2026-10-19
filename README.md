@@ -1,0 +1,77 @@
+# 时之沙 · 沙漠卡丁车道具赛 (Sands of Time Kart)
+
+**在线试玩 / Play in browser:** https://radaren.github.io/sands-kart-demo/
+
+一个用 **Godot 4.7.2（GDScript）** 制作的 6 人沙漠道具赛 Demo：单程约 2.9 km（风格参考 QQ飞车「时之沙」），规则参考 QQ飞车道具赛。
+本仓库基于作者已有的工程（卡丁车物理、赛道数据/生成、道具定义、美术与音效素材），在其架构上补全了 AI、橡皮筋、道具效果、排名、比赛流程、HUD、测试和 Web 发布。
+
+![race](screenshots/03_town.png)
+
+## 操作 Controls
+
+| 按键 | 动作 |
+|---|---|
+| W / ↑ | 加速（倒计时「2」后按下 = 起步超级喷；漂移结束后点按 = 小喷，紧接再点 = 双喷） |
+| S / ↓ | 刹车 / 倒车 |
+| A D / ← → | 转向 |
+| Shift | 漂移 |
+| Ctrl / Space | 使用道具（2 个道具栏，先用第 1 个） |
+| R | 重生到赛道（3 秒惩罚） |
+| B | 回看 |
+| Esc | 暂停 |
+
+## 玩法内容 Features
+
+- **赛道**：小镇 → 跳台 → 峡谷 → 沙丘，含 3 个跳台、加速带、道具箱点（2 秒刷新）、检查点、终点。
+- **车辆**：漂移 + 小喷 / 双喷、起步超级喷、空中/落地喷、氮气、加速带；多个加速效果取最大值不叠加。
+- **AI**：前视驾驶、走线偏移与内线、自动漂移与小喷、性格（激进/稳健/失误率）、宿敌「紫电」、橡皮筋（10 秒后启用，落后最多 +15%，领先最多 −10%）。
+- **道具（8 种）**：氮气、导弹、磁铁、香蕉皮、乌云、护盾、闪电、UFO；按名次分档的掉落权重。
+- **比赛逻辑**：曲线进度 + 检查点排名、逆行提示、掉落/卡住自动重生、成绩表（格式 1:23.45）、再来一局 / 返回标题。
+- **HUD**：名次、圈数、计时、km/h + 加速条、2 个道具栏、小地图、中央提示。
+
+## 运行 How to run
+
+1. 安装 [Godot 4.7.2-stable](https://godotengine.org/download)（标准版，非 .NET）。
+2. 用 Godot 打开本目录的 `project.godot`，按 F5。
+   或命令行：`godot --path .`
+
+测试（无界面）：
+
+```bash
+godot --headless --path . --import
+GODOT=godot bash tools/check_scripts.sh                    # 语法检查
+godot --headless --path . --fixed-fps 60 res://tests/test_runner.tscn -- --test --seed=7
+```
+
+测试覆盖：倒计时、起步喷速度、漂移小喷、拾取/使用道具、排名更新、逆行/重生、完赛与成绩表，结果写入 `tests/test_results.json`。
+截图：`xvfb-run godot --path . --rendering-method gl_compatibility --fixed-fps 60 res://tests/screenshot_runner.tscn -- --autopilot`。
+
+## Web 版 Web build
+
+推送到 `main` 后，GitHub Actions（`.github/workflows/pages.yml`）会下载 Godot 4.7.2 和导出模板，导出 Web（Compatibility 渲染器，单线程，不需要 COOP/COEP 头），并发布到 GitHub Pages。
+本地导出：`godot --headless --path . --export-release "Web" build/web/index.html`（需要安装 4.7.2 导出模板）。
+
+## 素材说明 Assets
+
+- 仙人掌、棕榈、岩石：作者提供的低多边形模型（`assets/props_raw/`）。
+- 泥屋、石柱、拱门、方尖碑、金字塔，以及卡丁车模型：暂用程序生成的替代模型（`scripts/props/procedural_prop.gd`、`scripts/kart_visual.gd`），之后可以直接换成正式模型。
+- 背景音乐 `assets/audio/bgm_desert_loop.wav` 是程序生成的临时循环（作者提供的 BGM 文件只是很短的占位片段）。
+- 字体：Noto Sans CJK SC Bold 子集（SIL OFL 1.1，见 `assets/fonts/OFL.txt`）。
+
+## 状态 / 路线图 Status & roadmap
+
+- [x] 完整单程比赛流程、6 车 AI、8 种道具、HUD、结算
+- [x] 无界面自动测试 + 截图
+- [x] Web 版自动部署（GitHub Pages）
+- [ ] 正式卡丁车与建筑模型、正式 BGM
+- [ ] 手柄 / 触屏操作、更多赛道、多圈模式
+
+---
+
+### English (short)
+
+A 6-kart desert item-race demo in Godot 4.7.2 (GDScript), inspired by the "Sands of Time" track from QQ Speed. It is built on the author's existing project (kart physics, track data and builder, item definitions, assets). On top of that this repo adds AI with rubber-banding, item effects, ranking, race flow, the HUD, headless tests and an auto-deployed web build.
+Controls: W/S throttle and brake, A/D steer, Shift drift, Ctrl/Space item, R respawn, Esc pause.
+Run it by opening `project.godot` in Godot 4.7.2, or play it in the browser at the link above. Some props, the kart model and the BGM are procedural placeholders.
+
+License: MIT (code). Bundled font: SIL OFL 1.1.

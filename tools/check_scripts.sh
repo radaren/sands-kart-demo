@@ -2,6 +2,7 @@
 # Parse-check every GDScript in the project with Godot headless.
 # (autoload identifiers such as GameConfig are unknown in --script mode and are ignored)
 GODOT=${GODOT:-godot}
+command -v "$GODOT" >/dev/null || { echo "Godot binary not found: $GODOT (set GODOT=/path/to/godot)"; exit 2; }
 cd "$(dirname "$0")/.."
 "$GODOT" --headless --path . --import >/dev/null 2>&1
 fail=0
