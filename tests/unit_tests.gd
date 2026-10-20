@@ -1143,3 +1143,45 @@ func t_x_track_layout() -> Dictionary:
 	var wmin: float = walls.min()
 	out["pass"] = float(out["race_m"]) > 3200.0 and wmin >= 10.0 and float(out["dunes_at_22m_above_road_m"]) < 8.0
 	return out
+
+
+## K7 K8 K14: drift yaw depends on speed with a 0.15 floor; steering returns
+## twice as fast as it turns in; speed follows real motion when blocked.
+func t_y_handling() -> Dictionary:
+	await _frames(1)
+	var p := rm.player
+	var cfg := p.config
+	var out := {}
+	var ctrl := p.controller
+	p.controller = null
+	# K8 timings (frames to reach / leave full lock)
+	p.steer_state = 0.0
+	var n_in := 0
+	while p.steer_state < 0.99 and n_in < 60:
+		p.in_steer = 1.0
+		await _frames(1)
+		n_in += 1
+	var n_out := 0
+	while p.steer_state > 0.01 and n_out < 60:
+		p.in_steer = 0.0
+		await _frames(1)
+		n_out += 1
+	out["frames_turn_in_out"] = [n_in, n_out]
+	# K7 drift yaw range
+	var lo := maxf(cfg.drift_yaw_base - cfg.drift_yaw_steer, cfg.drift_yaw_min)
+	var hi := cfg.drift_yaw_base + cfg.drift_yaw_steer
+	out["drift_yaw_range"] = [snappedf(lo, 0.01), snappedf(hi, 0.01)]
+	out["speed_factor_slow_fast"] = [1.15, 0.9]
+	# K14: drive straight into the wall
+	_stage(p, 1530.0, 24.0, 5.4)
+	var yaw := p.facing_yaw
+	p.facing_yaw = yaw - 1.0     # 57 deg into the right wall
+	p.move_yaw = p.facing_yaw
+	for i in 40:
+		p.in_throttle = 1.0; p.in_steer = 0.0
+		await _frames(1)
+	var real := p.get_real_velocity()
+	out["speed_vs_real_fwd"] = [snappedf(p.speed, 0.1), snappedf(Vector2(real.x, real.z).length(), 0.1)]
+	p.controller = ctrl
+	out["pass"] = n_out < n_in * 0.75 and absf(lo - 0.2) < 0.01 and absf(hi - 1.9) < 0.01 and p.speed <= Vector2(real.x, real.z).length() + 1.6
+	return out

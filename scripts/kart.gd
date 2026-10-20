@@ -219,7 +219,13 @@ func _physics_process(delta: float) -> void:
 	_tick_effects(delta)
 	var can_drive := not controls_locked and freeze_time <= 0.0 and stun_time <= 0.0
 	var steer := clampf(in_steer, -1.0, 1.0) if can_drive else 0.0
-	steer_state = move_toward(steer_state, steer, config.steer_response * delta)
+	# K8: soften the last 10 % of input at speed (keyboard on/off feel)
+	var sfrac := clampf(absf(speed) / config.max_speed, 0.0, 1.0)
+	if absf(steer) > 0.9:
+		steer = signf(steer) * (0.9 + (absf(steer) - 0.9) * (1.0 - config.steer_soften * sfrac))
+	# K8: return to centre twice as fast as turning in
+	var returning := absf(steer) < absf(steer_state) or signf(steer) != signf(steer_state)
+	steer_state = move_toward(steer_state, steer, (config.steer_return if returning else config.steer_response) * delta)
 	if can_drive:
 		_update_drift(delta)
 		_update_taps(delta)
@@ -418,7 +424,7 @@ func _update_heading(delta: float) -> void:
 	var frac := clampf(spd / config.max_speed, 0.0, 1.0)
 	if drifting:
 		var rate := config.drift_yaw_base + steer_state * float(drift_dir) * config.drift_yaw_steer
-		rate = maxf(rate, 0.35)
+		rate = maxf(rate, config.drift_yaw_min) * lerpf(1.15, 0.9, frac)   # K7: speed-dependent
 		facing_yaw -= float(drift_dir) * rate * delta
 		move_yaw = lerp_angle(move_yaw, facing_yaw, 1.0 - exp(-config.drift_grip * delta))
 	else:
@@ -471,6 +477,12 @@ func _move(delta: float) -> void:
 	var air_before := air_time
 	move_and_slide()
 	_handle_collisions()
+	# K14: blocked by a kart or a wall, the speed value follows the real motion
+	if is_on_floor() and speed > 0.0 and not launched:
+		var n := get_floor_normal()
+		var along := (dir - n * dir.dot(n)).normalized()     # along the slope (ramps!)
+		var real_fwd := get_real_velocity().dot(along)
+		speed = minf(speed, maxf(real_fwd, 0.0) + config.k14_slack)
 	grounded = is_on_floor() and _snap_off <= 0.0
 	if grounded and not _ground_below(config.air_gap + 0.3):
 		grounded = false   # dune crest: floor flag stuck but nothing under the wheels

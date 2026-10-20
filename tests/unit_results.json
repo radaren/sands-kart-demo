@@ -301,9 +301,9 @@
           -10.0
         ],
         "brake_pitch_deg": -2.8,
-        "front_wheel_yaw_deg": -25.0,
+        "front_wheel_yaw_deg": -24.5,
         "landing_spring_min_m": -0.07,
-        "roll_deg_right_turn": 4.9,
+        "roll_deg_right_turn": 4.8,
         "spring_settled_m": 0.0
       },
       "pass": true,
@@ -315,8 +315,8 @@
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 72,
-        "skid_segments": 34,
+        "skid_quads": 74,
+        "skid_segments": 35,
         "sparks": 15
       },
       "pass": true,
@@ -362,9 +362,9 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 5.37,
+        "attack_hold_s": 4.34,
         "lightning_used_in_8s_from_rank": false,
-        "missile_fired_after_s": -1.0,
+        "missile_fired_after_s": 9.68,
         "rank_at_give": 2,
         "slots_filled_first": false
       },
@@ -384,6 +384,28 @@
       },
       "pass": true,
       "test": "t_x_track_layout"
+    },
+    {
+      "detail": {
+        "drift_yaw_range": [
+          0.2,
+          1.9
+        ],
+        "frames_turn_in_out": [
+          8,
+          5
+        ],
+        "speed_factor_slow_fast": [
+          1.15,
+          0.9
+        ],
+        "speed_vs_real_fwd": [
+          17.6,
+          20.0
+        ]
+      },
+      "pass": true,
+      "test": "t_y_handling"
     }
   ]
 }

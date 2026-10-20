@@ -22,15 +22,19 @@ extends Resource
 @export_group("Handling")
 @export var turn_rate_low := 2.3
 @export var turn_rate_high := 1.15
-@export var steer_response := 7.5
+@export var steer_response := 7.0      ## K8: turning in
+@export var steer_return := 14.0       ## K8: back to centre (keyboard release no longer "sticky")
+@export var steer_soften := 0.25       ## K8: at top speed, input beyond 0.9 is scaled down by this much
 @export var grip := 10.0
 @export var air_control := 0.35
 @export var gravity := 24.0
 
 @export_group("Drift")
 @export var drift_grip := 2.4
-@export var drift_yaw_base := 1.3
-@export var drift_yaw_steer := 0.75
+@export var drift_yaw_base := 1.05     ## K7 (was 1.3)
+@export var drift_yaw_steer := 0.85    ## K7 (was 0.75): range 0.2-1.9 rad/s
+@export var drift_yaw_min := 0.15      ## K7 (was a hard 0.35)
+@export var k14_slack := 1.5           ## K14: speed may exceed the real forward velocity by this much
 @export var drift_speed_factor := 0.96
 @export var drift_min_speed := 11.0
 @export var drift_slip_drag := 2.4
