@@ -9,6 +9,7 @@ signal countdown_tick(value: int)        ## 3, 2, 1, 0 = GO
 signal race_started
 signal kart_finished(kart: Kart)
 signal race_completed(results: Array)
+signal player_finished(kart: Kart, place: int, time: float)   ## H6 finish presentation
 signal restart_requested
 signal title_requested
 signal karts_spawned(karts: Array)
@@ -19,7 +20,7 @@ const KART_SCENE := preload("res://scenes/kart/kart.tscn")
 const ITEM_TABLE := preload("res://data/item_table.tres")
 const COUNTDOWN := 3.0
 const SETTLE := 0.6            ## karts drop onto the grid before "3"
-const RESULTS_WAIT := 12.0     ## after the player finishes, wait this long for the AI
+const RESULTS_WAIT := 6.0      ## H6: after the player finishes, wait this long for the AI (was 12)
 
 const ROSTER := [
 	# name, colour, aggression, defense, mistake_rate (per 5 s), lane, rival, skill
@@ -53,6 +54,7 @@ var track_builder: TrackBuilder
 var item_system: ItemSystem
 var trackers := {}             ## Kart -> CheckpointTracker
 var _stuck := {}
+var player_stats := {}          ## H6: shown on the results screen
 var _player_finish_clock := -1.0
 var _rng := RandomNumberGenerator.new()
 var _last_count := 4
@@ -231,6 +233,7 @@ func _on_kart_finished(k: Kart) -> void:
 	if k == player:
 		_player_finish_clock = race_clock
 		k.announced.emit(k, "完赛! 第 %d 名" % (finish_order.size()), Kart.Tone.GOOD)
+		player_finished.emit(k, finish_order.size(), race_time)
 		if k.controller is PlayerInput:
 			# hand the kart to an AI so it coasts down the run-out
 			var ai := AIDriver.new()
@@ -310,6 +313,16 @@ func _complete_race() -> void:
 		results.append({"rank": k.rank, "name": k.display_name, "node": String(k.name), "time": t,
 				"time_text": ("≈" if estimated else "") + format_time(t), "player": k.is_player,
 				"color": k.body_color, "finished": k.finished})
+	player_stats = {}
+	if player:
+		var used := 0
+		if item_system:
+			for u in item_system.used_log:
+				if str(u.get("kart", "")) == String(player.name):
+					used += 1
+		player_stats = {"小喷": player.stat_mini_boosts, "完美双喷": player.stat_perfect_doubles,
+				"落地喷": "%d/%d" % [player.stat_landing_boosts, player.stat_launches], "道具": used,
+				"被击中": player.stat_hits, "撞墙": player.stat_wall_hits, "最高速": "%d km/h" % int(player.stat_top_kmh)}
 	race_completed.emit(results)
 
 

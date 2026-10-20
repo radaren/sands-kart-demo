@@ -1185,3 +1185,37 @@ func t_y_handling() -> Dictionary:
 	p.controller = ctrl
 	out["pass"] = n_out < n_in * 0.75 and absf(lo - 0.2) < 0.01 and absf(hi - 1.9) < 0.01 and p.speed <= Vector2(real.x, real.z).length() + 1.6
 	return out
+
+
+## H6 H7 H8: finish presentation + stats, results buttons locked for 1 s,
+## R ignored during the countdown and within 2 s of a respawn.
+func t_z_finish_flow() -> Dictionary:
+	await _frames(1)
+	var p := rm.player
+	var out := {}
+	out["results_wait_s"] = RaceManager.RESULTS_WAIT
+	p.controls_locked = true
+	out["respawn_allowed_locked"] = p.can_manual_respawn()
+	p.controls_locked = false
+	out["respawn_allowed_racing"] = p.can_manual_respawn() if rm.is_racing() else "n/a (race over)"
+	var hud: HudController = get_tree().root.find_children("*", "HudController", true, false)[0]
+	rm.player_finished.emit(p, 2, 101.5)
+	await _frames(2)
+	out["finish_text"] = hud.center_label.text
+	var rs: ResultsScreen = get_tree().root.find_children("*", "ResultsScreen", true, false)[0]
+	rm.player_stats = {"小喷": 3, "最高速": "120 km/h"}
+	rs.show_results(rm.results if not rm.results.is_empty() else [])
+	await _frames(5)
+	var b := rs.panel.find_child("Restart", true, false) as Button
+	out["restart_disabled_at_0.1s"] = b.disabled
+	await _wait(1.1)
+	out["restart_disabled_at_1.2s"] = b.disabled
+	var txt := ""
+	for c in rs.list.get_children():
+		if c is Label:
+			txt = (c as Label).text
+	out["stats_line"] = txt
+	rs.panel.visible = false
+	out["pass"] = out["results_wait_s"] == 6.0 and not out["respawn_allowed_locked"] and out["finish_text"].begins_with("第 2 名") \
+			and out["restart_disabled_at_0.1s"] and not out["restart_disabled_at_1.2s"] and txt.contains("小喷 3")
+	return out

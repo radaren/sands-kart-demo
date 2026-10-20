@@ -130,6 +130,22 @@ func _ready() -> void:
 				cp.speed = 22.0
 				await _frames(30)
 				await _snap(s)
+			"finish":         # H6: finish moment + results with stats
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var fp := rm.player
+				_teleport(fp, rm.track.finish_offset - 30.0)
+				var tr = rm.trackers[fp]
+				tr.next_index = tr.checkpoints.size()
+				fp.speed = 25.0
+				while not fp.finished:
+					await _frames(1)
+				await _frames(20)
+				await _snap("finish_moment")
+				while not rm.race_finished:
+					await _frames(1)
+				await _frames(80)
+				await _snap("finish_results")
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

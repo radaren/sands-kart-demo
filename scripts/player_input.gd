@@ -44,5 +44,5 @@ func compute(_delta: float) -> void:
 	kart.in_item_forward = fwd and not _prev_fwd
 	_prev_fwd = fwd
 	kart.look_back = Input.is_action_pressed("look_back")
-	if Input.is_action_just_pressed("respawn"):
+	if Input.is_action_just_pressed("respawn") and kart.can_manual_respawn():
 		kart.respawn_on_track()

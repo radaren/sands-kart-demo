@@ -119,6 +119,8 @@ var item_slots: Array:
 # --- stats ------------------------------------------------------------------------
 var stat_mini_boosts := 0
 var stat_hits := 0
+var stat_top_kmh := 0.0
+var _last_respawn_clock := -99.0
 
 
 func _ready() -> void:
@@ -217,6 +219,7 @@ func _physics_process(delta: float) -> void:
 		if controls_locked and race.get("go_clock") != null:
 			countdown_tap(race.race_clock, float(race.get("go_clock")))
 	_tick_effects(delta)
+	stat_top_kmh = maxf(stat_top_kmh, kmh())
 	var can_drive := not controls_locked and freeze_time <= 0.0 and stun_time <= 0.0
 	var steer := clampf(in_steer, -1.0, 1.0) if can_drive else 0.0
 	# K8: soften the last 10 % of input at speed (keyboard on/off feel)
@@ -699,6 +702,7 @@ func use_item() -> void:
 func respawn_on_track() -> void:
 	if track == null:
 		return
+	_last_respawn_clock = race.race_clock if race != null else 0.0
 	var s := maxf(track.start_offset - 12.0, progress - 6.0)
 	var at := track.spawn_transform(s, clampf(lateral * 0.3, -2.5, 2.5))
 	place(at)
@@ -713,3 +717,10 @@ func respawn_on_track() -> void:
 	air_boost_ready = false
 	wrong_way_time = 0.0
 	announced.emit(self, "已重置", Tone.INFO)
+
+
+## H8: the player's R key only works while racing, with a 2 s cooldown.
+func can_manual_respawn() -> bool:
+	if controls_locked or finished or race == null or not race.is_racing():
+		return false
+	return race.race_clock - _last_respawn_clock >= 2.0

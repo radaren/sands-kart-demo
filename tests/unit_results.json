@@ -315,7 +315,7 @@
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 74,
+        "skid_quads": 73,
         "skid_segments": 35,
         "sparks": 15
       },
@@ -362,9 +362,9 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 4.34,
+        "attack_hold_s": 5.34,
         "lightning_used_in_8s_from_rank": false,
-        "missile_fired_after_s": 9.68,
+        "missile_fired_after_s": -1.0,
         "rank_at_give": 2,
         "slots_filled_first": false
       },
@@ -400,12 +400,25 @@
           0.9
         ],
         "speed_vs_real_fwd": [
-          17.6,
-          20.0
+          12.6,
+          14.3
         ]
       },
       "pass": true,
       "test": "t_y_handling"
+    },
+    {
+      "detail": {
+        "finish_text": "第 2 名!\n1:41.50",
+        "respawn_allowed_locked": false,
+        "respawn_allowed_racing": "n/a (race over)",
+        "restart_disabled_at_0.1s": true,
+        "restart_disabled_at_1.2s": false,
+        "results_wait_s": 6.0,
+        "stats_line": "小喷 3  ·  最高速 120 km/h"
+      },
+      "pass": true,
+      "test": "t_z_finish_flow"
     }
   ]
 }

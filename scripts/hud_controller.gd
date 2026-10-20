@@ -178,6 +178,7 @@ func _ready() -> void:
 	_build_lock_warning(root)
 	_build_pause_menu(root)
 	race.countdown_tick.connect(_on_countdown)
+	race.player_finished.connect(_on_player_finished)
 	if race.item_system:
 		race.item_system.screen_flash.connect(_on_flash)
 	_bind_player.call_deferred()
@@ -369,6 +370,24 @@ func _update_rank(_delta: float) -> void:
 
 
 var rank_changes := 0
+
+
+## H6: finish moment - big place + time pop and confetti over the kart.
+func _on_player_finished(k: Kart, place: int, time: float) -> void:
+	center_label.text = "第 %d 名!\n%s" % [place, RaceManager.format_time(time)]
+	center_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25) if place <= 3 else Color(1, 1, 1))
+	center_label.add_theme_font_size_override("font_size", 96)
+	_center_time = 4.0
+	center_label.pivot_offset = center_label.custom_minimum_size * 0.5
+	center_label.scale = Vector2.ONE * 1.8
+	center_label.create_tween().tween_property(center_label, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	finish_shown = true
+	var world := k.get_parent()
+	for c in [Color(1.0, 0.3, 0.3), Color(1.0, 0.85, 0.2), Color(0.3, 0.8, 1.0), Color(0.5, 1.0, 0.4)]:
+		FxLib.burst(world, k.global_position + Vector3.UP * 2.5, c, 22, 9.0, 1.2, 0.3, -6.0, 60.0)
+
+
+var finish_shown := false
 
 
 func _on_flash(c: Color) -> void:

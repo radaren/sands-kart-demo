@@ -16,8 +16,8 @@ func _ready() -> void:
 	race.race_completed.connect(show_results)
 	panel = PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(560, 470)
-	panel.position = Vector2(-280, -235)
+	panel.custom_minimum_size = Vector2(560, 540)
+	panel.position = Vector2(-280, -270)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.18, 0.1, 0.05, 0.88)
 	sb.border_color = Color(1.0, 0.8, 0.4)
@@ -70,7 +70,28 @@ func show_results(results: Array) -> void:
 			l.add_theme_color_override("font_color", Color(1, 0.95, 0.5) if r.player else (r.color as Color).lightened(0.35))
 			row.add_child(l)
 		list.add_child(row)
+	# H6: player's race stats under the table
+	if not race.player_stats.is_empty():
+		var st := Label.new()
+		var parts := []
+		for key in race.player_stats:
+			parts.append("%s %s" % [key, str(race.player_stats[key])])
+		st.text = "  ·  ".join(parts)
+		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		st.custom_minimum_size = Vector2(520, 0)
+		st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		st.add_theme_font_size_override("font_size", 20)
+		st.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
+		list.add_child(st)
 	panel.visible = true
+	# H7: Space is also the item key - buttons ignore input for the first second
+	# so mashing items at the line can't restart the race
+	var buttons: Array = panel.find_children("*", "Button", true, false)
+	for b in buttons:
+		(b as Button).disabled = true
+	await get_tree().create_timer(1.0, true).timeout
+	for b in buttons:
+		(b as Button).disabled = false
 	(panel.find_child("Restart", true, false) as Button).grab_focus()
 
 

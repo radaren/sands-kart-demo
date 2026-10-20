@@ -123,10 +123,9 @@ func compute(delta: float) -> void:
 	var ahead := _min_radius(track, s, clampf(0.6 * sp, 8.0, 15.0) + 10.0)
 	var lane := lane_offset
 	var lane_rate := 3.0
-	if ahead.x < 45.0:
-		var inside := ahead.y * -(1.2 + 2.2 * aggression)   # right turn (-1) -> +lateral (right)
-		lane = lerpf(lane * 0.4, inside, clampf((45.0 - ahead.x) / 25.0, 0.0, 1.0))
-	elif kart.items.size() < Kart.MAX_ITEMS and kart.race != null and kart.race.get("track_builder") != null:
+	var box_lane := NAN
+	var box_dist := INF
+	if kart.items.size() < Kart.MAX_ITEMS and kart.race != null and kart.race.get("track_builder") != null:
 		# I1 follow-up: boxes no longer cover the road, so aim for one (most of the time)
 		var bl: float = _pick_box(s)
 		if not is_nan(bl):
@@ -135,9 +134,19 @@ func compute(delta: float) -> void:
 				# already holding an item: less keen (leaves boxes for the karts behind)
 				_box_go = _rng.randf() < (0.7 + 0.25 * aggression) * (0.5 if not kart.items.is_empty() and not kart.is_player else 1.0)
 			if _box_go:
-				lane = bl
-				lane_rate = 7.0       # committing to a box needs a quicker line change
-				look = minf(look, 13.0)   # and tighter tracking to hit a 1.35 m reach
+				box_lane = bl
+				var row: Array = kart.race.track_builder.boxes_in_row(s - 1.0, s + 55.0)
+				box_dist = float(row[0][0]) - s if not row.is_empty() else INF
+	# a box row just ahead wins over the corner line unless the corner is tight:
+	# rows often sit at a corner exit and the kart needs ~15 m to change lanes
+	var box_first := not is_nan(box_lane) and box_dist < 28.0 and ahead.x > 24.0
+	if ahead.x < 45.0 and not box_first:
+		var inside := ahead.y * -(1.2 + 2.2 * aggression)   # right turn (-1) -> +lateral (right)
+		lane = lerpf(lane * 0.4, inside, clampf((45.0 - ahead.x) / 25.0, 0.0, 1.0))
+	elif not is_nan(box_lane):
+		lane = box_lane
+		lane_rate = 7.0       # committing to a box needs a quicker line change
+		look = minf(look, 13.0)   # and tighter tracking to hit a 1.35 m reach
 	_lane_s = move_toward(_lane_s, lane, lane_rate * delta)    # A4/A5: lane changes at <= 3 m/s
 	lane = _lane_s
 	var target := track.position_at(s + look) + track.right_at(s + look) * lane

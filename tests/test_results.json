@@ -41,14 +41,14 @@
     {
       "detail": {
         "nitro_active": false,
-        "picked": "missile",
-        "progress_at_pickup": 350.8,
+        "picked": "magnet",
+        "progress_at_pickup": 825.5,
         "shield": false,
         "used_log": [
           {
-            "item": "missile",
+            "item": "magnet",
             "kart": "Player",
-            "time": 9.90000000000025
+            "time": 25.9333333333329
           }
         ]
       },
@@ -59,28 +59,28 @@
       "detail": {
         "after": [
           "AI_1",
-          "AI_2",
-          "AI_3",
-          "Player",
           "AI_5",
+          "AI_3",
+          "AI_2",
+          "Player",
           "AI_4"
         ],
         "ai_moving": 5,
         "before": [
           "AI_1",
-          "AI_2",
-          "AI_3",
-          "Player",
           "AI_5",
+          "AI_3",
+          "AI_2",
+          "Player",
           "AI_4"
         ],
-        "player_rank": 4,
+        "player_rank": 5,
         "rubber": {
-          "AI_1": 0.976,
-          "AI_2": 0.998,
-          "AI_3": 1.009,
-          "AI_4": 1.054,
-          "AI_5": 1.001,
+          "AI_1": 0.961,
+          "AI_2": 1.0,
+          "AI_3": 1.0,
+          "AI_4": 1.05,
+          "AI_5": 0.991,
           "Player": 1.0
         }
       },
@@ -100,51 +100,52 @@
       "detail": {
         "ai_attack_hold_s": [
           3,
-          4.77,
-          7.53
+          4.48,
+          6.5
         ],
         "ai_steer_jitter_per_s": [
-          0.49,
-          0.81,
-          0.68,
-          0.73,
-          0.66
+          0.69,
+          0.8,
+          0.59,
+          0.75,
+          0.54
         ],
         "ai_wall_hits": [
-          9,
-          2,
+          10,
           4,
-          1,
-          9
+          3,
+          2,
+          11
         ],
         "boost_kinds": {
-          "air": 1,
-          "landing": 2,
-          "mini": 7,
-          "pad": 3,
+          "air": 2,
+          "landing": 3,
+          "magnet": 1,
+          "mini": 5,
+          "pad": 2,
           "start": 1
         },
         "items_used_total": 19,
         "landing_boosts_by_kart": [
+          "3/3",
+          "1/3",
           "2/3",
           "2/3",
           "1/3",
-          "2/3",
-          "0/3",
-          "0/3"
+          "2/3"
         ],
-        "player_finish": "1:52.17",
-        "player_hits": 1,
+        "player_finish": "1:51.98",
+        "player_hits": 0,
         "race_finished": true,
         "results": [
-          "1 紫电 1:49.13",
-          "2 阿蓝 1:50.27",
-          "3 橘子 1:50.33",
-          "4 绿洲 1:50.65",
-          "5 小黄 1:51.00",
-          "6 你 1:52.17"
+          "1 紫电 1:46.32",
+          "2 小黄 1:49.30",
+          "3 绿洲 1:49.45",
+          "4 阿蓝 1:49.93",
+          "5 橘子 1:50.97",
+          "6 你 1:51.98"
         ],
-        "sim_seconds": 112.2
+        "sim_seconds": 112.0
       },
       "pass": true,
       "test": "race_finished_and_results"
