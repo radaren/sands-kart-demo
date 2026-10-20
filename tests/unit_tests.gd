@@ -957,3 +957,37 @@ func t_s_body_posture() -> Dictionary:
 	out["pass"] = out["roll_deg_right_turn"] > 2.0 and out["front_wheel_yaw_deg"] < -10.0 and out["brake_pitch_deg"] < -1.5 \
 			and max_up > 0.04 and min_pitch < -0.05 and min_spring < -0.03 and absf(v.spring_y) < 0.02
 	return out
+
+
+## V1: dust, tiered drift sparks, boost flame trail, landing dust, skid marks.
+func t_t_trail_fx() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var fx: KartTrailFx = rm.trail_fx
+	var p := rm.player
+	var ctrl := p.controller
+	p.controller = null
+	for key in fx.stats:
+		fx.stats[key] = 0
+	_stage(p, 1000.0, 24.0)
+	for i in 60:
+		p.in_throttle = 1.0; p.in_steer = 0.0
+		await _frames(1)
+	var dust_straight: int = fx.stats["dust"]
+	p.drifting = true; p.drift_dir = 1
+	for i in 80:
+		p.in_throttle = 1.0; p.in_steer = 1.0; p.in_drift = true
+		p.drifting = true; p.drift_time = 1.2
+		await _frames(1)
+	p.in_drift = false
+	var skids := fx.skid_count()
+	p.add_boost("nitro", 6.0, 0.6)
+	await _frames(30)
+	p.landed.emit(p, 0.8)
+	await _frames(2)
+	var out := fx.stats.duplicate()
+	out["dust_in_1s_straight"] = dust_straight
+	out["skid_quads"] = skids
+	p.controller = ctrl
+	out["pass"] = dust_straight >= 5 and fx.stats["sparks"] >= 5 and fx.stats["flames"] >= 5 and fx.stats["landing_dust"] >= 1 and skids >= 5
+	return out

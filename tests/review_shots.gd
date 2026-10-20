@@ -83,6 +83,23 @@ func _ready() -> void:
 					tp.in_steer = 1.0
 					await _frames(1)
 				await _snap(s)
+			"v1_drift":       # V1: dust, tier sparks, skid marks, then a boost flame trail
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var vp := rm.player
+				vp.controller = null
+				_teleport(vp, 1000.0)
+				vp.speed = 25.0
+				for i in 70:
+					vp.in_throttle = 1.0; vp.in_steer = 0.6
+					vp.drifting = true; vp.drift_dir = 1; vp.drift_time = 0.3 + i * 0.02
+					await _frames(1)
+				await _snap(s)
+				vp.drifting = false
+				vp.in_steer = 0.0
+				vp.add_boost("nitro", 6.0, 1.0)
+				await _frames(20)
+				await _snap("v1_boost")
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

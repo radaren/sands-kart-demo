@@ -35,6 +35,7 @@ const ROSTER := [
 @export var track_builder_path: NodePath = ^"../SandsTrack"
 @export var item_system_path: NodePath = ^"../ItemSystem"
 
+var trail_fx: KartTrailFx
 var state := State.COUNTDOWN
 var race_clock := 0.0           ## seconds since the scene started (used by Kart taps)
 var go_clock := SETTLE + COUNTDOWN
@@ -129,6 +130,10 @@ func _spawn_karts() -> void:
 		karts.append(kart)
 		if kart.is_player:
 			player = kart
+	trail_fx = KartTrailFx.new()      # V1 dust / sparks / flames / skid marks
+	trail_fx.name = "TrailFx"
+	trail_fx.race = self
+	root.add_child(trail_fx)
 	for k in karts:
 		var rb := k.get_node_or_null("RubberBand") as AIRubberBand
 		if rb:

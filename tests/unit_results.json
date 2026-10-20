@@ -46,7 +46,7 @@
           "hit_taken": 2,
           "item_used": 1,
           "items_changed": 1,
-          "landed": 1,
+          "landed": 2,
           "shield_blocked": 2,
           "wall_hit": 1
         },
@@ -308,6 +308,19 @@
       },
       "pass": true,
       "test": "t_s_body_posture"
+    },
+    {
+      "detail": {
+        "dust": 21,
+        "dust_in_1s_straight": 7,
+        "flames": 16,
+        "landing_dust": 1,
+        "skid_quads": 34,
+        "skid_segments": 34,
+        "sparks": 15
+      },
+      "pass": true,
+      "test": "t_t_trail_fx"
     }
   ]
 }
