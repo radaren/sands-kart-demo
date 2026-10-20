@@ -38,6 +38,25 @@
       },
       "pass": true,
       "test": "t_c_environment_fog_and_renderer"
+    },
+    {
+      "detail": {
+        "connections": {
+          "boosted": 1,
+          "hit_taken": 2,
+          "item_used": 1,
+          "items_changed": 1,
+          "landed": 1,
+          "shield_blocked": 1,
+          "wall_hit": 1
+        },
+        "fov_kick_after_mini": 4.0,
+        "magnet_boosted_signals_over_30_ticks": 1,
+        "sfx_loaded": 15,
+        "trauma_after_wall_hit_0.8": 0.2
+      },
+      "pass": true,
+      "test": "t_d_feedback_wired"
     }
   ]
 }

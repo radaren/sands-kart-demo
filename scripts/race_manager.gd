@@ -11,6 +11,7 @@ signal kart_finished(kart: Kart)
 signal race_completed(results: Array)
 signal restart_requested
 signal title_requested
+signal karts_spawned(karts: Array)
 
 enum State { COUNTDOWN, RACING, FINISHED }
 
@@ -130,6 +131,7 @@ func _spawn_karts() -> void:
 		if rb:
 			rb.player = player
 	_update_ranking()
+	karts_spawned.emit(karts)
 
 
 func is_racing() -> bool:

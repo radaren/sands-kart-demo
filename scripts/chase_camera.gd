@@ -22,14 +22,29 @@ var _yaw := 0.0
 var _pos := Vector3.ZERO
 var _back := false
 var _have := false
-var _fov := 72.0
+var _fov := 70.0
+var trauma := 0.0            ## 0..1, shake = trauma^2 * noise (C5)
+var fov_kick := 0.0          ## extra degrees, decays over ~0.35 s (C4)
+var _shake_t := 0.0
+var _noise := FastNoiseLite.new()
 
 
 static func damp(a: float, b: float, rate: float, dt: float) -> float:
 	return lerpf(a, b, 1.0 - exp(-rate * dt))
 
 
+## Feedback hooks (FeedbackDirector): trauma accumulates, FOV kick takes the max.
+func add_trauma(amount: float) -> void:
+	trauma = clampf(trauma + amount, 0.0, 1.0)
+
+
+func kick_fov(degrees: float) -> void:
+	fov_kick = maxf(fov_kick, degrees)
+
+
 func _ready() -> void:
+	_noise.seed = 3
+	_noise.frequency = 1.6
 	race = get_node(race_path) as RaceManager
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	fov = _fov
@@ -69,8 +84,24 @@ func _process(delta: float) -> void:
 		_pos.z = damp(_pos.z, want.z, horiz_rate, delta)
 		_pos.y = damp(_pos.y, want.y, vert_rate, delta)
 	_have = true
+	# continuous nitro rumble
+	if k.boosts.has("nitro"):
+		trauma = maxf(trauma, 0.08 ** 0.5)
+	var shake := Vector3.ZERO
+	var roll := 0.0
+	if trauma > 0.0:
+		_shake_t += delta * 60.0
+		var amp := trauma * trauma
+		shake = Vector3(_noise.get_noise_2d(_shake_t, 0.0), _noise.get_noise_2d(0.0, _shake_t), 0.0) * 0.45 * amp
+		roll = _noise.get_noise_2d(_shake_t, _shake_t) * 0.05 * amp
+		trauma = maxf(0.0, trauma - 1.4 * delta)
 	global_position = _pos
 	look_at(xf.origin + fwd * look_ahead + Vector3.UP * 1.0, Vector3.UP)
-	var target_fov := 72.0 + clampf(frac, 0.0, 1.4) * 8.0 + 6.0 * boost
-	_fov = damp(_fov, target_fov, 3.0, delta)
-	fov = _fov
+	if shake != Vector3.ZERO:
+		global_position += global_basis * shake
+		rotate_object_local(Vector3.FORWARD, roll)
+	# C4: base 70, up to +12 with speed, plus a decaying kick on boost start
+	var target_fov := 70.0 + 12.0 * minf(frac, 1.0)
+	_fov = damp(_fov, target_fov, 4.0, delta)
+	fov_kick = move_toward(fov_kick, 0.0, delta * maxf(fov_kick, 1.0) / 0.35)
+	fov = _fov + fov_kick

@@ -12,6 +12,8 @@ signal hit_taken(kart: Kart, kind: String)
 signal items_changed(kart: Kart)
 signal boosted(kart: Kart, kind: String)
 signal wall_hit(kart: Kart, strength: float)
+signal landed(kart: Kart, air_time: float)
+signal shield_blocked(kart: Kart, kind: String)
 
 enum Tone { GOOD, BAD, INFO }
 
@@ -380,6 +382,8 @@ func _move(delta: float) -> void:
 
 func _on_landed(air: float) -> void:
 	last_air_time = air
+	if air > 0.2:
+		landed.emit(self, air)
 	air_boost_ready = false
 	if air >= config.landing_min_air:
 		landing_window = config.tap_window
@@ -430,10 +434,14 @@ func _bump(other: Kart, n: Vector3) -> void:
 # effects + items
 # ---------------------------------------------------------------------------
 func add_boost(kind: String, bonus: float, duration: float, kick: float = 0.35) -> void:
+	var fresh := not boosts.has(kind)
 	var prev: Vector2 = boosts.get(kind, Vector2.ZERO)
 	boosts[kind] = Vector2(maxf(prev.x, bonus), maxf(prev.y, duration))
 	speed = maxf(speed, minf(speed + bonus * kick, base_top_speed() + bonus))
-	boosted.emit(self, kind)
+	# only signal a boost that starts or gets stronger (the magnet refreshes its
+	# boost every tick; that must not spam sounds / FOV kicks)
+	if fresh or bonus > prev.x:
+		boosted.emit(self, kind)
 
 
 func add_slow(kind: String, amount: float, duration: float) -> void:
@@ -446,6 +454,7 @@ func hit(kind: String, stun: float, blockable: bool, slow_amt: float = 0.0, slow
 	if blockable and shield_time > 0.0:
 		shield_time = 0.0
 		announced.emit(self, "护盾抵挡!", Tone.GOOD)
+		shield_blocked.emit(self, kind)
 		return false
 	if stun > 0.0:
 		stun_time = maxf(stun_time, stun)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/track/sands_track.tscn" id="1_track"]
 [ext_resource type="Script" path="res://scripts/race_manager.gd" id="2_rm"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/results.tscn" id="6_res"]
 [ext_resource type="Script" path="res://scripts/race_audio.gd" id="7_audio"]
 [ext_resource type="Script" path="res://scripts/race_environment.gd" id="8_env"]
+[ext_resource type="Script" path="res://scripts/feedback_director.gd" id="9_fb"]
 
 [node name="Race" type="Node3D"]
 
@@ -33,3 +34,6 @@ script = ExtResource("4_cam")
 
 [node name="RaceAudio" type="Node" parent="."]
 script = ExtResource("7_audio")
+
+[node name="Feedback" type="Node" parent="."]
+script = ExtResource("9_fb")

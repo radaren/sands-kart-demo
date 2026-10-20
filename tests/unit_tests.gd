@@ -145,3 +145,36 @@ func t_c_environment_fog_and_renderer() -> Dictionary:
 			and str(ProjectSettings.get_setting("rendering/renderer/rendering_method")) == "gl_compatibility",
 			"fog_sky_affect": env.fog_sky_affect, "fog_density": env.fog_density, "sun_pitch_deg": snappedf(sun.rotation_degrees.x, 0.1),
 			"renderer": ProjectSettings.get_setting("rendering/renderer/rendering_method")}
+
+
+## W3/C4/C5: kart signals are wired to sound + camera; magnet refresh doesn't spam.
+func t_d_feedback_wired() -> Dictionary:
+	var fb: FeedbackDirector = race.get_node("Feedback")
+	var cam: ChaseCamera = race.get_node("ChaseCamera")
+	var p := rm.player
+	var conns := {}
+	for sig in ["wall_hit", "boosted", "hit_taken", "items_changed", "landed", "shield_blocked"]:
+		conns[sig] = p.get_signal_connection_list(sig).size()
+	var it: ItemSystem = race.get_node("ItemSystem")
+	conns["item_used"] = it.get_signal_connection_list("item_used").size()
+	cam.trauma = 0.0
+	p.wall_hit.emit(p, 0.8)
+	var trauma := cam.trauma
+	var wall_sfx: bool = fb.played.back() == "wall"
+	cam.fov_kick = 0.0
+	p.add_boost("mini", 7.5, 0.5)
+	var kick := cam.fov_kick
+	var mini_sfx: bool = fb.played.back() == "mini"
+	var count := [0]
+	var cb := func(_k, kind): if kind == "magnet": count[0] += 1
+	p.boosted.connect(cb)
+	for i in 30:
+		p.add_boost("magnet", 8.0, 0.15, 0.0)
+		await _frames(1)
+	p.boosted.disconnect(cb)
+	p.boosts.clear()
+	var sounds := fb.streams.size()
+	var all_wired: bool = conns.values().all(func(v): return v > 0)
+	return {"pass": all_wired and trauma >= 0.19 and wall_sfx and kick >= 3.9 and mini_sfx and count[0] == 1 and sounds >= 10,
+			"connections": conns, "trauma_after_wall_hit_0.8": snappedf(trauma, 0.01), "fov_kick_after_mini": snappedf(kick, 0.01),
+			"magnet_boosted_signals_over_30_ticks": count[0], "sfx_loaded": sounds}
