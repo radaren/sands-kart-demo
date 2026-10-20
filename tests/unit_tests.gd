@@ -131,3 +131,17 @@ func t_b_camera_interpolated_and_heading_damped() -> Dictionary:
 			"interpolation_setting": ProjectSettings.get_setting("physics/common/physics_interpolation"),
 			"camera_uses_interpolated_origin": interp_ok, "yaw_change_first_frames_rad": snappedf(step1, 0.001),
 			"yaw_change_after_1s_rad": snappedf(after1s, 0.001), "kart_yaw_step_rad": 1.2}
+
+
+## T8 / W1: fog does not paint the sky; one renderer everywhere.
+func t_c_environment_fog_and_renderer() -> Dictionary:
+	var we: WorldEnvironment = race.find_child("WorldEnvironment*", true, false)
+	if we == null:
+		for n in race.find_children("*", "WorldEnvironment", true, false):
+			we = n
+	var env := we.environment
+	var sun: DirectionalLight3D = race.find_child("Sun", true, false)
+	return {"pass": env.fog_sky_affect <= 0.2 and env.fog_density <= 0.0008 and sun.rotation_degrees.x > -40.0
+			and str(ProjectSettings.get_setting("rendering/renderer/rendering_method")) == "gl_compatibility",
+			"fog_sky_affect": env.fog_sky_affect, "fog_density": env.fog_density, "sun_pitch_deg": snappedf(sun.rotation_degrees.x, 0.1),
+			"renderer": ProjectSettings.get_setting("rendering/renderer/rendering_method")}

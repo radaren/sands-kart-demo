@@ -195,24 +195,43 @@ float hash12(vec2 p) {
 	p3 += dot(p3, p3.yzx + 33.33);
 	return fract((p3.x + p3.y) * p3.z);
 }
+// smooth value noise: no hard cell edges (T5)
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
+			mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+// band-limited noise: fades to its mean (0.5) once a cell gets smaller than a pixel
+float grain_at(vec2 p) {
+	vec2 w = fwidth(p);
+	float fade = 1.0 - smoothstep(0.35, 1.0, max(w.x, w.y));
+	return mix(0.5, vnoise(p), fade);
+}
+// anti-aliased step for stripes
+float aa_step(float edge, float x) {
+	float w = max(fwidth(x), 1e-4);
+	return smoothstep(edge - w, edge + w, x);
+}
 void fragment() {
 	vec2 uv = UV;
-	float grain = hash12(floor(uv * vec2(180.0, 110.0)));
-	float patches = hash12(floor(uv * vec2(7.0, 4.0)));
+	float grain = 0.6 * grain_at(uv * vec2(180.0, 110.0)) + 0.4 * grain_at(uv * vec2(45.0, 28.0));
+	float patches = vnoise(uv * vec2(7.0, 4.0));
 	vec3 base = mix(surface, sand, 0.28 * (0.25 + 0.75 * patches));
-	base *= 0.84 + 0.32 * grain;
+	base *= 0.86 + 0.28 * grain;
 	float edge = min(uv.x, 1.0 - uv.x);
-	if (edge < curb_width) {
-		float band = step(0.5, fract(uv.y * 2.4));
-		base = mix(curb_red, curb_white, band) * (0.9 + 0.16 * grain);
-	} else if (edge < curb_width * 1.6) {
-		base *= 0.58;
-	}
+	float curb = 1.0 - aa_step(curb_width, edge);
+	float gutter = (1.0 - aa_step(curb_width * 1.6, edge)) * (1.0 - curb);
+	float stripe = fract(uv.y * 2.4);
+	float band = aa_step(0.5, stripe) * (1.0 - aa_step(0.98, stripe));
+	vec3 curb_col = mix(curb_red, curb_white, band) * (0.9 + 0.16 * grain);
+	base = mix(base, curb_col, curb);
+	base *= 1.0 - 0.42 * gutter;
 	float centre = abs(uv.x - 0.5);
-	float dash = step(0.5, fract(uv.y * 0.9));
-	if (centre < 0.006 && dash > 0.5) {
-		base = mix(base, vec3(0.93, 0.86, 0.62), 0.75);
-	}
+	float dashp = fract(uv.y * 0.9);
+	float dash = aa_step(0.5, dashp) * (1.0 - aa_step(0.98, dashp)) * (1.0 - aa_step(0.006, centre));
+	base = mix(base, vec3(0.93, 0.86, 0.62), 0.75 * dash);
 	ALBEDO = base;
 	ROUGHNESS = 0.88;
 	SPECULAR = 0.16;
@@ -231,7 +250,9 @@ float hash12(vec2 p) {
 }
 void fragment() {
 	float blocks = step(0.5, fract(UV.y * 0.5));
-	float grain = hash12(floor(UV * vec2(24.0, 5.0)));
+	vec2 gp = UV * vec2(24.0, 5.0);
+	vec2 gw = fwidth(gp);
+	float grain = mix(0.5, hash12(floor(gp)), 1.0 - smoothstep(0.35, 1.0, max(gw.x, gw.y)));
 	vec3 base = mix(rock, warn, 0.32 * blocks);
 	base *= 0.8 + 0.3 * grain;
 	ALBEDO = base;

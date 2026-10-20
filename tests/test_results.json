@@ -107,18 +107,18 @@
           "start": 1
         },
         "items_used_total": 30,
-        "player_finish": "1:39.28",
+        "player_finish": "1:39.35",
         "player_hits": 1,
         "race_finished": true,
         "results": [
           "1 阿蓝 1:36.32",
           "2 橘子 1:38.35",
-          "3 小黄 1:39.23",
-          "4 你 1:39.28",
-          "5 紫电 1:39.42",
-          "6 绿洲 1:40.68"
+          "3 小黄 1:39.15",
+          "4 绿洲 1:39.27",
+          "5 你 1:39.35",
+          "6 紫电 1:40.87"
         ],
-        "sim_seconds": 100.7
+        "sim_seconds": 100.9
       },
       "pass": true,
       "test": "race_finished_and_results"

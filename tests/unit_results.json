@@ -28,6 +28,16 @@
       },
       "pass": true,
       "test": "t_b_camera_interpolated_and_heading_damped"
+    },
+    {
+      "detail": {
+        "fog_density": 0.000699999975040555,
+        "fog_sky_affect": 0.150000005960464,
+        "renderer": "gl_compatibility",
+        "sun_pitch_deg": -35.0
+      },
+      "pass": true,
+      "test": "t_c_environment_fog_and_renderer"
     }
   ]
 }
