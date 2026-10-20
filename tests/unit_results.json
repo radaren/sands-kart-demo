@@ -52,7 +52,7 @@
         },
         "fov_kick_after_mini": 4.0,
         "magnet_boosted_signals_over_30_ticks": 1,
-        "sfx_loaded": 15,
+        "sfx_loaded": 16,
         "trauma_after_wall_hit_0.8": 0.2
       },
       "pass": true,
@@ -129,8 +129,8 @@
           "expected_loss": 0.17,
           "impact": 0.34,
           "loss": 0.17,
-          "speed_after": 20.6,
-          "speed_before": 24.9,
+          "speed_after": 20.1,
+          "speed_before": 24.3,
           "wall_hit_events_in_0.15s": 1
         },
         "angle_1.20": {
@@ -172,6 +172,31 @@
       },
       "pass": true,
       "test": "t_l_ai_skill_model"
+    },
+    {
+      "detail": {
+        "air_time_per_ramp_s": [
+          0.85,
+          0.88,
+          0.62
+        ],
+        "boost_bonus_mps": 3.0,
+        "boost_fired_per_ramp": [
+          true,
+          true,
+          true
+        ],
+        "boost_time_s": 1.5,
+        "boost_without_tap": false,
+        "ding_played": true,
+        "window_frames_no_tap": [
+          19,
+          19,
+          19
+        ]
+      },
+      "pass": true,
+      "test": "t_m_landing_boost"
     }
   ]
 }

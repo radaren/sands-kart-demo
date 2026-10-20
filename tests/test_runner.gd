@@ -165,7 +165,8 @@ func _run() -> void:
 	var ok_rows: bool = rm.results.size() == 6 and rm.results.all(func(r): return str(r.time_text) != "")
 	_check("race_finished_and_results", done and ok_rows and res_screen.is_showing(),
 			{"race_finished": rm.race_finished, "player_finish": RaceManager.format_time(player.finish_time), "results": times,
-			"boost_kinds": boost_kinds, "player_hits": player.stat_hits, "items_used_total": rm.item_system.used_log.size(),
+			"boost_kinds": boost_kinds, "player_hits": player.stat_hits,
+			"landing_boosts_by_kart": rm.karts.map(func(k): return "%d/%d" % [k.stat_landing_boosts, k.stat_launches]), "items_used_total": rm.item_system.used_log.size(),
 			"sim_seconds": snappedf(rm.race_time, 0.1)})
 
 	var all_ok: bool = results.all(func(r): return r.pass)

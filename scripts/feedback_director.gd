@@ -6,7 +6,7 @@ extends Node
 
 const SFX_DIR := "res://assets/audio/sfx/"
 const SFX := ["beep", "go", "boost", "mini", "wall", "pickup", "use", "explode", "hit",
-		"zap", "shield", "slip", "warn", "finish", "land"]
+		"zap", "shield", "slip", "warn", "finish", "land", "ding"]
 const HIT_SOUND := {"missile": "explode", "lightning": "zap", "banana": "slip", "ufo": "zap"}
 const FOV_KICK := {"mini": 4.0, "nitro": 10.0, "start": 8.0, "pad": 8.0, "landing": 6.0, "air": 5.0}
 
@@ -52,6 +52,9 @@ func _on_karts(karts: Array) -> void:
 		k.hit_taken.connect(_on_hit)
 		k.items_changed.connect(_on_items_changed)
 		k.landed.connect(_on_landed)
+		k.landing_window_opened.connect(func(kk: Kart) -> void:
+			if kk.is_player:
+				play("ding", kk, 2.0))
 		k.shield_blocked.connect(func(kk: Kart, _kind: String) -> void: play("shield", kk))
 
 

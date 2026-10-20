@@ -13,6 +13,7 @@ signal items_changed(kart: Kart)
 signal boosted(kart: Kart, kind: String)
 signal wall_hit(kart: Kart, strength: float)
 signal landed(kart: Kart, air_time: float)
+signal landing_window_opened(kart: Kart)
 signal shield_blocked(kart: Kart, kind: String)
 
 enum Tone { GOOD, BAD, INFO }
@@ -80,6 +81,11 @@ var double_window := 0.0
 var double_delay := 0.0
 var landing_window := 0.0
 var air_boost_ready := false
+var air_boost_used := false     ## once per airtime
+var _snap_off := 0.0
+var _tap_buffer := 0.0            ## floor snap disabled right after a launch
+var stat_landing_boosts := 0
+var stat_launches := 0
 var start_window := 0.0
 var boosts := {}            ## kind -> Vector2(bonus, remaining)
 var slows := {}             ## kind -> Vector2(amount, remaining)
@@ -282,13 +288,19 @@ func _update_taps(delta: float) -> void:
 			return
 	if landing_window > 0.0:
 		landing_window -= delta
-		if in_tap:
+		if in_tap or _tap_buffer > 0.0:
+			_tap_buffer = 0.0
 			landing_window = 0.0
-			add_boost("landing", config.landing_boost_bonus, config.landing_boost_time)
+			add_boost("landing", config.landing_boost_bonus, config.landing_boost_time, 1.0)
+			stat_landing_boosts += 1
 			announced.emit(self, "落地喷!", Tone.GOOD)
 			return
-	if not grounded and air_boost_ready and air_time >= config.air_boost_min_air and in_tap:
+	_tap_buffer = maxf(0.0, _tap_buffer - delta)
+	if not grounded and in_tap and not (air_boost_ready and not air_boost_used and air_time >= config.air_boost_min_air):
+		_tap_buffer = 0.1   # a tap just before touchdown still counts as the landing tap
+	if not grounded and air_boost_ready and not air_boost_used and air_time >= config.air_boost_min_air and in_tap:
 		air_boost_ready = false
+		air_boost_used = true
 		add_boost("air", config.air_boost_bonus, config.air_boost_time)
 		announced.emit(self, "空喷!", Tone.GOOD)
 
@@ -384,16 +396,31 @@ func _move(delta: float) -> void:
 	var h := dir * speed + external
 	external = external.move_toward(Vector3.ZERO, 9.0 * delta)
 	var vy := velocity.y
+	var launched := false
 	if grounded:
-		vy = maxf(vy, -3.0)
+		vy = minf(vy, 0.0) - 4.0 if not _on_ramp_rise() else maxf(vy, -3.0)
+		# K2: explicit kicker launch at the lip so the jump (and the landing
+		# boost) doesn't depend on how the slide projection happened to go
+		if track != null and speed > 8.0:
+			var lip := track.ramp_lip_near(progress)
+			if lip > 0.0:
+				vy = minf(6.0, speed * maxf(0.0, track.slope_before(lip)) * config.takeoff_lift)
+				launched = true
 	else:
 		vy -= config.gravity * delta
 	velocity = Vector3(h.x, vy, h.z)
+	_snap_off = maxf(0.0, _snap_off - delta)
+	if launched:
+		_snap_off = 0.25
+		stat_launches += 1
+	floor_snap_length = 0.0 if _snap_off > 0.0 else 0.45
 	var was_grounded := grounded
 	var air_before := air_time
 	move_and_slide()
 	_handle_collisions()
-	grounded = is_on_floor()
+	grounded = is_on_floor() and _snap_off <= 0.0
+	if grounded and not _ground_below(config.air_gap + 0.3):
+		grounded = false   # dune crest: floor flag stuck but nothing under the wheels
 	if grounded:
 		ground_normal = get_floor_normal()
 		if not was_grounded:
@@ -402,8 +429,26 @@ func _move(delta: float) -> void:
 	else:
 		if was_grounded:
 			air_boost_ready = true
+			air_boost_used = false
 		air_time += delta
 	rotation = Vector3(0.0, facing_yaw, 0.0)
+
+
+func _on_ramp_rise() -> bool:
+	if track == null:
+		return false
+	for r in track.ramps:
+		if progress >= r - 1.0 and progress <= r + track.ramp_length + 0.5:
+			return true
+	return false
+
+
+func _ground_below(dist: float) -> bool:
+	var space := get_world_3d().direct_space_state
+	var from := global_position + Vector3.UP * 0.3
+	var q := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * (dist + 0.3), LAYER_WORLD)
+	q.exclude = [get_rid()]
+	return not space.intersect_ray(q).is_empty()
 
 
 func _on_landed(air: float) -> void:
@@ -412,7 +457,8 @@ func _on_landed(air: float) -> void:
 		landed.emit(self, air)
 	air_boost_ready = false
 	if air >= config.landing_min_air:
-		landing_window = config.tap_window
+		landing_window = config.landing_window_time
+		landing_window_opened.emit(self)
 
 
 func _handle_collisions() -> void:

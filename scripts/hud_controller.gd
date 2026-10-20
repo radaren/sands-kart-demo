@@ -231,8 +231,10 @@ func _process(delta: float) -> void:
 			tip_label.text = "小喷就绪! 按 ↑/W"
 			tip_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
 			_tip_time = 0.3
-		if player.landing_window > 0.0 and _tip_time <= 0.0:
-			tip_label.text = "落地喷就绪! 按 ↑/W"
+		if player.landing_window > 0.0:
+			# the window is only 0.3 s: this hint wins over any other tip
+			tip_label.text = "落地喷! 点按 ↑/W"
+			tip_label.add_theme_color_override("font_color", Color(0.55, 1.0, 1.0))
 			_tip_time = 0.3
 	if race.state == RaceManager.State.COUNTDOWN and race.race_clock < RaceManager.SETTLE:
 		center_label.text = ""

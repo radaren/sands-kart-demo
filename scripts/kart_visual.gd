@@ -145,12 +145,35 @@ func build(color: Color, driver_name: String) -> void:
 
 var kart: Kart
 var name_tag: Label3D
+var land_ring: MeshInstance3D
+var _ring_mat: StandardMaterial3D
+var _ring_t := -1.0
 var _t := 0.0
 var _spin := 0.0
 
 
 func _ready() -> void:
 	kart = get_parent() as Kart
+	# landing-boost cue: a bright ring bursts out from the wheels on touchdown
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.85
+	torus.outer_radius = 1.0
+	torus.rings = 24
+	torus.ring_segments = 6
+	_ring_mat = StandardMaterial3D.new()
+	_ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_ring_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_ring_mat.albedo_color = Color(0.8, 1.0, 1.0, 1.0)
+	land_ring = MeshInstance3D.new()
+	land_ring.mesh = torus
+	land_ring.material_override = _ring_mat
+	land_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	land_ring.visible = false
+	land_ring.position = Vector3(0, 0.1, 0)
+	add_child(land_ring)
+	if kart:
+		kart.landing_window_opened.connect(func(_k: Kart) -> void: _ring_t = 0.0)
 	# Driven every rendered frame from the kart's interpolated transform (C1),
 	# so it is top-level and opts out of physics interpolation itself.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -185,8 +208,18 @@ func _process(delta: float) -> void:
 	var dstate := 0
 	if kart.drifting:
 		dstate = 2 if kart.drift_charged() else 1
-	if kart.mini_window > 0.0 or kart.landing_window > 0.0:
+	if kart.mini_window > 0.0:
 		dstate = 2
+	if kart.landing_window > 0.0:
+		dstate = 3     # touchdown flash: white sparks = tap now
+	if _ring_t >= 0.0:
+		_ring_t += delta
+		var k := _ring_t / 0.35
+		land_ring.visible = k < 1.0
+		land_ring.scale = Vector3.ONE * lerpf(0.6, 2.6, sqrt(minf(k, 1.0)))
+		_ring_mat.albedo_color.a = clampf(1.0 - k, 0.0, 1.0)
+		if k >= 1.0:
+			_ring_t = -1.0
 	update_fx(kart.is_boosting(), dstate, kart.shield_time > 0.0, kart.speed * delta / 0.3, _t)
 
 
@@ -197,7 +230,14 @@ func update_fx(boosting: bool, drift_state: int, shield: bool, wheel_spin: float
 			f.scale = Vector3.ONE * (0.85 + 0.3 * sin(t * 40.0 + f.position.x * 10.0))
 	for s in sparks:
 		s.visible = drift_state > 0
-	if drift_state == 2:
+		if drift_state != 3:
+			s.scale = Vector3.ONE
+	if drift_state == 3:
+		_spark_mat.albedo_color = Color(0.85, 1.0, 1.0)
+		_spark_mat.emission = Color(0.85, 1.0, 1.0)
+		for sp in sparks:
+			sp.scale = Vector3(2.2, 2.2, 1.6)
+	elif drift_state == 2:
 		_spark_mat.albedo_color = Color(1.0, 0.6, 0.1)
 		_spark_mat.emission = Color(1.0, 0.6, 0.1)
 	else:

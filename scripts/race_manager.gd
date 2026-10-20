@@ -175,6 +175,14 @@ func _go() -> void:
 	race_started.emit()
 
 
+## Debug/test teleport: places the kart at offset s and resyncs progress bookkeeping.
+func teleport(k: Kart, s: float, lat := 0.0) -> void:
+	k.place(track.spawn_transform(s, lat))
+	k.track_index = clampi(int(s / track.step), 0, track.points.size() - 1)
+	trackers[k] = CheckpointTracker.new(track.checkpoints, s)
+	k.progress = s
+
+
 func _track_karts(delta: float) -> void:
 	for k in karts:
 		var proj := track.project(k.global_position, k.track_index, 14)

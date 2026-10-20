@@ -77,6 +77,8 @@ def main():
         dd = 0.16 if i < 3 else 0.6
         tt = t(dd); parts.append((np.sin(2 * np.pi * f * tt) + 0.3 * np.sin(4 * np.pi * f * tt)) * env(len(tt), 0.005, dd * 0.6))
     save("finish", np.concatenate(parts), 0.7)
+    d = 0.25; n = len(t(d))
+    save("ding", (np.sin(2 * np.pi * 1760 * t(d)) + 0.5 * np.sin(2 * np.pi * 2640 * t(d))) * np.exp(-t(d) * 14), 0.6)
     d = 0.3; n = len(t(d))
     save("land", (lowpass(noise(n), 0.05) * 1.2 + 0.7 * np.sin(2 * np.pi * 55 * t(d))) * env(n, 0.002, 0.25), 0.7)
 

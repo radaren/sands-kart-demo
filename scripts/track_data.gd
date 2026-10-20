@@ -22,6 +22,7 @@ var wall_height := 0.8
 var start_offset := 0.0
 var finish_offset := 0.0
 var ramps := PackedFloat32Array()
+var ramp_length := 16.0
 var boosts := PackedFloat32Array()
 var item_rows := PackedFloat32Array()
 var checkpoints := PackedFloat32Array()
@@ -67,6 +68,7 @@ func _read(path: String) -> void:
 			"boosts": boosts = dst
 			"item_rows": item_rows = dst
 			"checkpoints": checkpoints = dst
+	ramp_length = float(d.get("ramp_length", 16.0))
 	length = float(d.get("length", maxf(0.0, (points.size() - 1) * step)))
 	_build_frames()
 
@@ -215,3 +217,22 @@ func spawn_transform(s: float, lateral: float) -> Transform3D:
 	var t := tangent_at(s)
 	var basis := Basis.looking_at(t, Vector3.UP)
 	return Transform3D(basis, p + Vector3.UP * 0.6)
+
+
+## If s is within `window` metres before a ramp lip, returns the lip offset, else -1.
+func ramp_lip_near(s: float, window := 2.5) -> float:
+	for r in ramps:
+		var lip := r + ramp_length
+		if s >= lip - window and s <= lip + 0.5:
+			return lip
+	return -1.0
+
+
+## Steepest road slope (rise / run) in the few metres before s.
+func slope_before(s: float, span := 4.0) -> float:
+	var best := -INF
+	var x := s - span
+	while x < s:
+		best = maxf(best, (position_at(x + 1.0).y - position_at(x).y))
+		x += 0.5
+	return best

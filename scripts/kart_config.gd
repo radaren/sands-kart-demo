@@ -51,9 +51,12 @@ extends Resource
 @export var air_boost_bonus := 5.0
 @export var air_boost_time := 1.0
 @export var air_boost_min_air := 0.22
-@export var landing_boost_bonus := 7.0
-@export var landing_boost_time := 0.9
-@export var landing_min_air := 0.35
+@export var landing_boost_bonus := 3.0   ## 落地喷: +3 m/s for 1.5 s (user spec)
+@export var landing_boost_time := 1.5
+@export var landing_min_air := 0.25      ## meaningful air (was 0.35: 2 of 3 ramps never qualified)
+@export var landing_window_time := 0.3   ## tap W within this after touchdown
+@export var takeoff_lift := 0.7          ## K2: lip launch vy = speed * lip slope * this
+@export var air_gap := 0.5               ## airborne when no ground within this below the kart
 @export var nitro_bonus := 12.0
 @export var nitro_time := 3.0
 @export var pad_bonus := 10.0

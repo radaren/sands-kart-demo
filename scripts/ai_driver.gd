@@ -196,7 +196,7 @@ func compute(delta: float) -> void:
 			tap = true
 	elif kart.landing_window <= 0.0:
 		_air_roll_done = false
-	if _land_go and kart.landing_window > 0.0 and kart.landing_window < kart.config.tap_window - 0.06:
+	if _land_go and kart.landing_window > 0.0 and kart.landing_window < kart.config.landing_window_time - 0.06:
 		tap = true
 
 	kart.in_steer = steer

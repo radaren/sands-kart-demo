@@ -16,6 +16,7 @@ for s in $SEEDS; do
   fails=$(echo "$out" | grep -E "^FAIL|SCRIPT ERROR" | cut -c1-300)
   fin=$(echo "$out" | grep -o '"player_finish":"[^"]*"' | head -1)
   res=$(echo "$out" | grep -o '"results":\[[^]]*\]' | head -1)
+  res="$res $(echo "$out" | grep -o '"landing_boosts_by_kart":\[[^]]*\]' | head -1)"
   if echo "$out" | grep -q "^ALL PASS"; then echo "seed $s: ALL PASS $fin $res"; else echo "seed $s: FAILED"; echo "$fails"; fail=1; fi
 done
 [ $fail = 0 ] && echo "== EVERYTHING PASSED" || echo "== FAILURES"

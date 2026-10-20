@@ -60,7 +60,7 @@ func _ai(i: int) -> Kart:
 
 ## Put a kart on the centre line at offset s, moving at `spd`, with its AI parked.
 func _stage(k: Kart, s: float, spd: float, lat := 0.0) -> void:
-	k.place(rm.track.spawn_transform(s, lat))
+	rm.teleport(k, s, lat)
 	k.speed = spd
 	k.velocity = k.move_dir() * spd
 
@@ -429,3 +429,67 @@ func t_l_ai_skill_model() -> Dictionary:
 			"tap_delay_mean_s": snappedf(mean, 0.001), "taps_too_late_pct": snappedf(100.0 * late / maxf(1, delays.size()), 0.1),
 			"shield_delay_range_s": [snappedf(rmin, 0.01), snappedf(rmax, 0.01)], "shield_chance_def0.5": 0.65,
 			"mistake_rate_per_check": snappedf(m_rate, 0.001), "steer_mistakes_left_right": [left, right], "roster_skills": roster_skills}
+
+
+## Landing boost (落地喷): every kicker gives 0.6-1.0 s of air at race speeds;
+## touchdown opens a 0.3 s window (+ding); a W tap in it gives +3 m/s for 1.5 s;
+## not tapping gives nothing.
+func t_m_landing_boost() -> Dictionary:
+	await _until_racing()
+	var p := rm.player
+	var fb: FeedbackDirector = race.get_node("Feedback")
+	var ctrl := p.controller
+	var pin := PlayerInput.new()
+	pin.kart = p
+	p.controller = pin
+	Input.action_press("accelerate")
+	var airs := []
+	var windows := []
+	var fired := []
+	var bonus := 0.0
+	var dur := 0.0
+	var ding := false
+	var no_tap_boost := false
+	var idx := 0
+	for r in rm.track.ramps:
+		for tap in [true, false]:
+			_stage(p, r - 40.0, 26.0)
+			p.boosts.clear()
+			await _frames(2)
+			var base := p.stat_landing_boosts
+			var t_air := 0.0
+			var t_win := 0
+			var tapped := false
+			for i in 240:
+				await _frames(1)
+				if not p.grounded:
+					t_air = maxf(t_air, p.air_time)
+				if p.landing_window > 0.0:
+					t_win += 1
+					if not ding:
+						ding = fb.played.has("ding")
+					if tap and not tapped and t_win == 3:   # 0.05 s after touchdown
+						Input.action_release("accelerate")
+						await _frames(1)
+						Input.action_press("accelerate")
+						tapped = true
+				if tapped and p.boosts.has("landing") and bonus == 0.0:
+					bonus = p.boosts["landing"].x
+					dur = p.boosts["landing"].y
+				if t_air > 0.0 and p.grounded and p.landing_window <= 0.0 and (tapped or t_win > 0) and i > 120:
+					break
+			if tap:
+				airs.append(snappedf(t_air, 0.01))
+				fired.append(p.stat_landing_boosts > base)
+			else:
+				windows.append(t_win)
+				no_tap_boost = no_tap_boost or p.stat_landing_boosts > base
+			idx += 1
+	Input.action_release("accelerate")
+	p.controller = ctrl
+	pin.free()
+	var air_ok: bool = airs.all(func(a): return a >= 0.6 and a <= 1.0)
+	var win_ok: bool = windows.all(func(w): return w >= 16 and w <= 20)
+	return {"pass": air_ok and win_ok and fired.all(func(f): return f) and not no_tap_boost and is_equal_approx(bonus, 3.0) and dur >= 1.4 and ding,
+			"air_time_per_ramp_s": airs, "window_frames_no_tap": windows, "boost_fired_per_ramp": fired,
+			"boost_bonus_mps": bonus, "boost_time_s": snappedf(dur, 0.01), "ding_played": ding, "boost_without_tap": no_tap_boost}

@@ -14,6 +14,12 @@ var last_passed_s := 0.0
 func _init(cps: PackedFloat32Array, start_s: float) -> void:
 	checkpoints = cps
 	last_passed_s = start_s
+	# starting mid-track (tests, debug teleports): earlier checkpoints count as passed
+	while next_index < checkpoints.size() and checkpoints[next_index] <= start_s:
+		last_passed_s = checkpoints[next_index]
+		next_index += 1
+	if start_s > 0.0 and next_index == 0:
+		last_passed_s = start_s
 
 
 ## Feed the raw projected progress; returns the validated progress.

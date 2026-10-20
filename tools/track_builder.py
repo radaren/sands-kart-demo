@@ -15,9 +15,9 @@ import os
 
 STEP = 2.0
 RUN_OUT = 150.0          # straight after the finish line where finished karts coast
-RAMP_LEN = 18.0          # kicker length (concave, steepest at the lip)
-RAMP_HEIGHT = 2.6
-RAMP_DROP = 3.0          # length of the drop back to grade after the lip
+RAMP_LEN = 16.0          # kicker length (concave, steepest at the lip ~21 deg)  (T2)
+RAMP_HEIGHT = 3.8
+RAMP_DROP = 24.0         # landing down-slope back to grade after the lip (T2)
 
 # ---------------------------------------------------------------------------
 # Course definition (single run: start gate -> finish line -> run-out)
@@ -94,8 +94,9 @@ def ramp_lift(s, ramps):
             t = (s - r) / RAMP_LEN
             lift = max(lift, RAMP_HEIGHT * t ** 1.6)
         elif r + RAMP_LEN <= s < r + RAMP_LEN + RAMP_DROP:
+            # smooth landing slope (cosine): karts fly over it and touch down on a downhill
             t = (s - (r + RAMP_LEN)) / RAMP_DROP
-            lift = max(lift, RAMP_HEIGHT * (1.0 - t) ** 0.5)
+            lift = max(lift, RAMP_HEIGHT * (0.5 + 0.5 * math.cos(math.pi * t)))
     return lift
 
 
@@ -170,6 +171,8 @@ def main():
         "points": points,
         "ramps": ramps,
         "ramp_length": RAMP_LEN,
+        "ramp_height": RAMP_HEIGHT,
+        "ramp_drop": RAMP_DROP,
         "boosts": boosts,
         "item_rows": items,
         "checkpoints": checkpoints,
