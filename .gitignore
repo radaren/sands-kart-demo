@@ -8,3 +8,4 @@ assets/props_raw/audio_src/*.zip
 # exported builds
 build/
 *.pck
+__pycache__/

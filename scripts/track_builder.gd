@@ -14,10 +14,15 @@ const LAYER_KART := 2
 const LAYER_TRIGGER := 4
 const LAYER_WALL := 8
 
-const TERRAIN_CELL := 12.0
+const TERRAIN_CELL := 8.0          ## T4: was 12 m; indexed + smooth normals now
+## T3: canyon zone (track distance, m): U-turns + sweeper between the ramp
+## basin and the dunes. Terrain 8.5-34 m off the road rises to road + 14-25 m.
+const CANYON_FROM := 630.0
+const CANYON_TO := 1180.0
+var build_ms := {}
 const BUCKET_SIZE := 24.0
 const WALL_COLLISION_HEIGHT := 4.5
-const ITEM_RESPAWN := 2.0
+const ITEM_RESPAWN := 1.2
 
 @export var build_on_ready := true
 
@@ -41,15 +46,22 @@ func build() -> void:
 	_noise.fractal_octaves = 4
 	_detail.seed = 77
 	_detail.frequency = 0.05
+	var t0 := Time.get_ticks_usec()
 	_index_track()
 	_build_road()
 	_build_walls()
 	_build_road_marks()
+	var t1 := Time.get_ticks_usec()
 	_build_terrain()
+	build_ms["terrain"] = (Time.get_ticks_usec() - t1) / 1000.0
 	_build_gates()
 	_build_boost_pads()
 	_build_item_rows()
+	var t2 := Time.get_ticks_usec()
 	_build_scenery()
+	build_ms["scenery"] = (Time.get_ticks_usec() - t2) / 1000.0
+	build_ms["total"] = (Time.get_ticks_usec() - t0) / 1000.0
+	print("TRACK BUILD ms ", build_ms)
 
 
 # ---------------------------------------------------------------------------
@@ -98,8 +110,19 @@ func terrain_height(x: float, z: float) -> float:
 		var shoulder := road_y - 0.45
 		var t := clampf((dist - 7.2) / 70.0, 0.0, 1.0)
 		t = t * t * (3.0 - 2.0 * t)
-		return lerpf(shoulder, maxf(base, shoulder - 4.0), t)
+		var h := lerpf(shoulder, maxf(base, shoulder - 4.0), t)
+		var w := canyon_weight(float(nearest["index"]) * track.step)
+		if w > 0.0:
+			var wall_y := road_y + lerpf(14.0, 25.0, _detail.get_noise_2d(x * 0.3, z * 0.3) * 0.5 + 0.5)
+			var prof := smoothstep(8.5, 14.0, dist) * (1.0 - smoothstep(34.0, 64.0, dist))
+			h = maxf(h, lerpf(h, wall_y, prof * w))
+		return h
 	return base
+
+
+## 0..1 canyon strength at track distance s (40 m ramps at both ends).
+func canyon_weight(s: float) -> float:
+	return smoothstep(CANYON_FROM - 40.0, CANYON_FROM, s) * (1.0 - smoothstep(CANYON_TO, CANYON_TO + 40.0, s))
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +309,12 @@ void fragment() {
 	vec3 col = mix(sand_dark, sand_light, 0.35 + 0.65 * big);
 	col = mix(col, crest, smoothstep(2.0, 12.0, world_pos.y) * 0.5);
 	col *= 0.93 + 0.1 * ripple;
+	// T3: steep faces (canyon walls) read as layered sandstone
+	vec3 wn = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	float rock = 1.0 - smoothstep(0.72, 0.93, wn.y);
+	float band = sin(world_pos.y * 1.7 + vnoise(world_pos.xz * 0.08) * 3.0) * 0.5 + 0.5;
+	vec3 stone = mix(vec3(0.62, 0.36, 0.22), vec3(0.80, 0.54, 0.34), band);
+	col = mix(col, stone, rock);
 	ALBEDO = col;
 	ROUGHNESS = 0.97;
 }
@@ -458,6 +487,7 @@ func _build_terrain() -> void:
 					Vector3(x1, heights[(ix + 1) * (rows + 1) + iz + 1], z1),
 					Vector3(x0, heights[ix * (rows + 1) + iz + 1], z1),
 					Vector3.UP, [Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+	st.index()                 # T4: share vertices so normals are smooth, not faceted
 	st.generate_normals()
 	_mesh_instance("Terrain", st, false)
 
@@ -709,6 +739,22 @@ func box_lateral_ahead(s_from: float, s_to: float, lateral: float) -> float:
 	return best
 
 
+## All active boxes of the first row within [s_from, s_to]: [[s, lateral], ...]
+func boxes_in_row(s_from: float, s_to: float) -> Array:
+	var row_s := INF
+	for h in item_box_nodes:
+		var hs: float = h.get_meta("s", -1.0)
+		if hs >= s_from and hs <= s_to and hs < row_s:
+			row_s = hs
+	var out := []
+	if row_s == INF:
+		return out
+	for h in item_box_nodes:
+		if h.get_meta("active", false) and absf(float(h.get_meta("s", -1.0)) - row_s) < 1.0:
+			out.append([row_s, float(h.get_meta("lateral", 0.0))])
+	return out
+
+
 ## Nearest active item box lateral offsets within [s_from, s_to]; used by AI.
 func item_row_ahead(s_from: float, s_to: float) -> float:
 	for s in track.item_rows:
@@ -772,6 +818,8 @@ func _build_scenery() -> void:
 		var count := rng.randi_range(1, 3) if in_town else rng.randi_range(1, 2)
 		for k in count:
 			var at := s + k * 7.0
+			if canyon_weight(at) > 0.1:
+				continue      # T3: the canyon walls replace the roadside props there
 			var lateral := side * (rng.randf_range(11.5, 20.0) if in_town else rng.randf_range(12.0, 34.0))
 			var pos := track.position_at(at) + track.right_at(at) * lateral
 			var near := nearest_track(pos.x, pos.z, 2)

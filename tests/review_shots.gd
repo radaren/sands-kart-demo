@@ -121,6 +121,15 @@ func _ready() -> void:
 				hp.mini_window = 0.3
 				await _frames(2)
 				await _snap(s)
+			"canyon", "canyon_exit", "sbend":   # T1 T3: canyon U-turn, canyon exit, dune S-bend
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var cp := rm.player
+				cp.controller = null
+				_teleport(cp, {"canyon": 650.0, "canyon_exit": 1000.0, "sbend": 1440.0}[s])
+				cp.speed = 22.0
+				await _frames(30)
+				await _snap(s)
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

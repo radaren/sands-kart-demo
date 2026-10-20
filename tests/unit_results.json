@@ -176,9 +176,9 @@
     {
       "detail": {
         "air_time_per_ramp_s": [
-          0.85,
-          0.88,
-          0.6
+          0.83,
+          0.8,
+          0.9
         ],
         "boost_bonus_mps": 3.0,
         "boost_fired_per_ramp": [
@@ -285,9 +285,9 @@
     },
     {
       "detail": {
-        "ai_ahead_m": 20.5,
+        "ai_ahead_m": 42.6,
         "ai_hit": true,
-        "ai_to_peel_m": 3.6,
+        "ai_to_peel_m": 18.6,
         "landed_ahead_m": 24.0,
         "thrower_hit": false
       },
@@ -315,7 +315,7 @@
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 34,
+        "skid_quads": 72,
         "skid_segments": 34,
         "sparks": 15
       },
@@ -332,7 +332,7 @@
         "next_shown": "A low",
         "overtake_tip": "超越 绿洲!",
         "queued": 2,
-        "rank_changes": 1,
+        "rank_changes": 2,
         "shown_after_3_pushes": "C bad",
         "tip_kept": "A low"
       },
@@ -362,14 +362,28 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 4.08,
+        "attack_hold_s": 5.37,
         "lightning_used_in_8s_from_rank": false,
         "missile_fired_after_s": -1.0,
         "rank_at_give": 2,
-        "slots_filled_first": true
+        "slots_filled_first": false
       },
       "pass": true,
       "test": "t_w_ai_item_timing"
+    },
+    {
+      "detail": {
+        "canyon_wall_above_road_m": [
+          20.1,
+          18.5,
+          20.3
+        ],
+        "dunes_at_22m_above_road_m": 0.2,
+        "race_m": 3326.0,
+        "terrain_cell_m": 8.0
+      },
+      "pass": true,
+      "test": "t_x_track_layout"
     }
   ]
 }

@@ -128,11 +128,12 @@ func compute(delta: float) -> void:
 		lane = lerpf(lane * 0.4, inside, clampf((45.0 - ahead.x) / 25.0, 0.0, 1.0))
 	elif kart.items.size() < Kart.MAX_ITEMS and kart.race != null and kart.race.get("track_builder") != null:
 		# I1 follow-up: boxes no longer cover the road, so aim for one (most of the time)
-		var bl: float = kart.race.track_builder.box_lateral_ahead(s + 6.0, s + 55.0, kart.lateral)
+		var bl: float = _pick_box(s)
 		if not is_nan(bl):
 			if absf(_box_row_s - s) > 60.0:
 				_box_row_s = s
-				_box_go = _rng.randf() < 0.7 + 0.25 * aggression
+				# already holding an item: less keen (leaves boxes for the karts behind)
+				_box_go = _rng.randf() < (0.7 + 0.25 * aggression) * (0.5 if not kart.items.is_empty() and not kart.is_player else 1.0)
 			if _box_go:
 				lane = bl
 				lane_rate = 7.0       # committing to a box needs a quicker line change
@@ -282,6 +283,25 @@ func roll_mistake() -> bool:
 
 
 # ---------- item AI ----------
+## A4/I1: choose a box in the next row - near our line, but not one that a kart
+## ahead on (about) the same line will take first.
+func _pick_box(s: float) -> float:
+	var row: Array = kart.race.track_builder.boxes_in_row(s - 1.0, s + 55.0)
+	var best := NAN
+	var best_score := -INF
+	for b in row:
+		var hs: float = b[0]
+		var hl: float = b[1]
+		var score := -absf(hl - kart.lateral)
+		for k: Kart in kart.race.karts:
+			if k != kart and k.progress > s and k.progress < hs and absf(k.lateral - hl) < 1.8:
+				score -= 6.0
+		if score > best_score:
+			best_score = score
+			best = hl
+	return best
+
+
 func _decide_item(delta: float, r_ahead: float) -> bool:
 	if kart.items.is_empty():
 		_item_delay = -1.0

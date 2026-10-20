@@ -40,13 +40,30 @@ SEGS = [
     ("A", 90, 60),     # wide sweepers into the dunes
     ("S", 250),
     ("A", 90, 70),
-    ("S", 560),        # long dune straight
-    ("A", -90, 55),
-    ("S", 420),        # second long straight
-    ("A", 90, 60),
+    # T1: the 560 m dune straight is broken by an S-bend ...
+    ("S", 210),
+    ("A", 35, 32),
+    ("A", -35, 32),
+    ("S", 270),
+    ("A", -90, 36),    # was R55
+    # ... and the 420 m straight gets a technical R28 step (right then left)
+    ("S", 150),
+    ("A", 90, 28),
+    ("S", 55),
+    ("A", -90, 28),
+    ("S", 140),
+    ("A", 90, 36),     # was R60
     ("S", 140),
     ("A", 90, 45),
-    ("S", 280),        # final straight to the finish line
+    # T1: a technical dune hairpin section before the finish (keeps the race
+    # at ~1:40-2:20 after the S-bend / R28 changes)
+    ("S", 90),
+    ("A", -90, 34),
+    ("S", 170),
+    ("A", 180, 30),    # dune hairpin
+    ("S", 170),
+    ("A", -90, 34),
+    ("S", 160),        # final straight to the finish line
     ("S", RUN_OUT),    # run-out beyond the finish
 ]
 

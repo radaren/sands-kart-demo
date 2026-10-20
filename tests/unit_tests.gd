@@ -878,10 +878,13 @@ func t_r_banana_forward() -> Dictionary:
 	var ai := _ai(2)
 	var out := {}
 	_stage(p, 1300.0, 22.0)
-	_stage(ai, 1322.0, 3.0)
+	_stage(ai, 1345.0, 3.0)
 	var actrl := ai.controller
 	ai.controller = null
 	ai.in_throttle = 0.0
+	for k in rm.karts:      # nobody else may drive over the peel
+		if k != p and k != ai:
+			_stage(k, 300.0 + rm.karts.find(k) * 8.0, 0.0)
 	await _frames(10)
 	var ctrl := p.controller
 	p.controller = null
@@ -1017,7 +1020,8 @@ func t_u_hud_flow() -> Dictionary:
 	out["cue"] = h.cue_label.text
 	out["tip_kept"] = h.tip_label.text
 	p.mini_window = 0.0
-	# boost meter
+	# boost meter (staged away from boost pads)
+	_stage(p, 1530.0, 6.0)
 	p.boosts.clear()
 	p.add_boost("nitro", 6.0, 2.0)
 	await _wait(1.0)
@@ -1119,4 +1123,23 @@ func t_w_ai_item_timing() -> Dictionary:
 	out["attack_hold_s"] = snappedf(drv._attack_hold, 0.01)
 	await _clear_items()
 	out["pass"] = (not used_light or ai.rank >= 4) and (fired_after < 0.0 or fired_after >= 1.5)
+	return out
+
+
+## T1 T3 T4: longer technical layout, canyon walls only inside the canyon zone.
+func t_x_track_layout() -> Dictionary:
+	await _frames(1)
+	var tb: TrackBuilder = rm.track_builder
+	var tr := rm.track
+	var out := {"race_m": snappedf(tr.finish_offset - tr.start_offset, 1.0)}
+	var walls := []
+	for s in [700.0, 900.0, 1100.0]:
+		var c := tr.position_at(s) + tr.right_at(s) * 22.0
+		walls.append(snappedf(tb.terrain_height(c.x, c.z) - tr.position_at(s).y, 0.1))
+	out["canyon_wall_above_road_m"] = walls
+	var c2 := tr.position_at(2000.0) + tr.right_at(2000.0) * 22.0
+	out["dunes_at_22m_above_road_m"] = snappedf(tb.terrain_height(c2.x, c2.z) - tr.position_at(2000.0).y, 0.1)
+	out["terrain_cell_m"] = TrackBuilder.TERRAIN_CELL
+	var wmin: float = walls.min()
+	out["pass"] = float(out["race_m"]) > 3200.0 and wmin >= 10.0 and float(out["dunes_at_22m_above_road_m"]) < 8.0
 	return out
