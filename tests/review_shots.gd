@@ -145,7 +145,8 @@ func _use(k: Kart, item: int) -> void:
 
 ## Item presentation stills: it_<item>[_<phase>]
 const ITEM_S := {"it_missile": 900.0, "it_warning": 1100.0, "it_banana": 1650.0, "it_cloud": 1900.0,
-		"it_shield": 2050.0, "it_lightning": 2250.0, "it_magnet": 700.0, "it_ufo": 2650.0, "it_hud": 1250.0}
+		"it_shield": 2050.0, "it_lightning": 2250.0, "it_magnet": 700.0, "it_ufo": 2650.0, "it_hud": 1250.0,
+		"it_wall": 1000.0, "it_bump": 1100.0}
 
 
 func _reset_scene() -> void:
@@ -243,6 +244,44 @@ func _item_shot(name: String) -> void:
 			for i in 120:
 				await _frames(1)
 			await _snap(name)
+		"it_wall":          # grind along the right wall (no driver)
+			_setup_pair(base, 300.0)
+			var ctrl := p.controller
+			p.controller = null
+			_teleport(p, base, 3.0)
+			p.speed = 26.0
+			p.facing_yaw -= 0.45
+			p.move_yaw = p.facing_yaw
+			p.in_throttle = 1.0
+			p.in_steer = 0.35
+			for i in 40:
+				await _frames(1)
+				if p.scraping and i > 8:
+					break
+			await _frames(4)
+			await _snap(name + "_hit")
+			await _frames(12)
+			await _snap(name + "_scrape")
+			p.in_steer = 0.0
+			p.controller = ctrl
+		"it_bump":
+			var ai := _setup_pair(base, 4.0)
+			var ctrl := p.controller
+			var actrl := ai.controller
+			p.controller = null
+			ai.controller = null
+			p.speed = 26.0
+			ai.speed = 14.0
+			p.in_throttle = 1.0
+			ai.in_throttle = 0.5
+			for i in 60:
+				await _frames(1)
+				if p.stat_bumps + ai.stat_bumps > 0:
+					break
+			await _frames(3)
+			await _snap(name)
+			p.controller = ctrl
+			ai.controller = actrl
 		"it_hud":
 			var ai := _setup_pair(base, 26.0)
 			p.items.clear()

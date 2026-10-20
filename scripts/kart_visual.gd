@@ -149,6 +149,7 @@ func build(color: Color, driver_name: String) -> void:
 var kart: Kart
 var name_tag: Label3D
 var land_ring: MeshInstance3D
+var _cam_fade := 0.0
 var _shield_mat: ShaderMaterial
 var _shield_break_t := -1.0
 var _shield_on_t := 0.0
@@ -189,9 +190,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# name tags: hide when the camera is right on top of the kart (huge text)
+	var cam := get_viewport().get_camera_3d()
+	var cam_d := cam.global_position.distance_to(global_position) if cam else 100.0
 	if name_tag:
-		var cam := get_viewport().get_camera_3d()
-		name_tag.visible = cam == null or cam.global_position.distance_to(global_position) > 9.0
+		name_tag.visible = cam_d > 9.0
+	# C6: other karts right at the lens fade out instead of filling the screen
+	if kart and not kart.is_player and model:
+		var fade := clampf((3.5 - cam_d) / 1.5, 0.0, 1.0)
+		if absf(fade - _cam_fade) > 0.02:
+			_cam_fade = fade
+			for g in model.find_children("*", "GeometryInstance3D", true, false):
+				(g as GeometryInstance3D).transparency = fade
+			model.visible = fade < 0.98
 	if kart == null or model == null:
 		return
 	_t += delta

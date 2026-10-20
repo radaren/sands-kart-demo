@@ -598,7 +598,7 @@ void fragment() {
 
 const ITEM_ROW_A := [-4.6, -2.1, 2.1, 4.6]   ## lateral metres (for a 12 m road): centre gap
 const ITEM_ROW_B := [-3.7, 0.0, 3.7]          ## staggered: gaps between the boxes
-const ITEM_TRIGGER_RADIUS := 0.8
+const ITEM_TRIGGER_RADIUS := 0.5   # K11: karts are 1.7 m wide now; keeps reach ~1.35 m
 
 
 func _build_item_rows() -> void:

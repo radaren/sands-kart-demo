@@ -253,6 +253,9 @@ func t_g_item_boxes_not_guaranteed() -> Dictionary:
 
 
 func _kart_half_width() -> float:
+	var side := rm.player.get_node_or_null("SideShape") as CollisionShape3D
+	if side and side.shape is CapsuleShape3D:
+		return (side.shape as CapsuleShape3D).height * 0.5
 	var cs: CollisionShape3D = rm.player.get_node("CollisionShape3D")
 	if cs.shape is BoxShape3D:
 		return (cs.shape as BoxShape3D).size.x * 0.5
@@ -623,5 +626,99 @@ func t_n_item_presentation() -> Dictionary:
 			and out["lightning_bolts"] >= 2 and out["lightning_box_meshes"] == 0 and out["flash_when_player_casts"] == 0 \
 			and out["flash_when_player_struck"] == 1 and out["lightning_squash"] and out["shield_shader"] and out["shield_break_sound"] \
 			and out["hud_icons_loaded"] == 8 and out["hud_roulette_running"] and out["hud_icon_after_roll"]
+	out["pass"] = ok
+	return out
+
+
+func _count_sparks() -> int:
+	var n := 0
+	for c in race.get_children():
+		if c is CPUParticles3D:
+			n += 1
+	return n
+
+
+## K10 K11 C6 V1: wide collider; one bump resolution per pair with closing-speed
+## impulse and 30% speed hand-off on rear-ends; sparks + sounds for wall hits,
+## wall scraping and bumps; karts at the lens fade out.
+func t_o_collision_presentation() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var fb: FeedbackDirector = race.get_node("Feedback")
+	var p := rm.player
+	var ai := _ai(1)
+	var out := {}
+	out["kart_half_width_m"] = _kart_half_width()
+	# --- rear-end bump
+	var ctrl := p.controller
+	var ai_ctrl := ai.controller
+	p.controller = null
+	ai.controller = null
+	p.in_throttle = 0.0
+	ai.in_throttle = 0.0
+	_stage(p, 60.0, 24.0, 0.0)
+	_stage(ai, 63.2, 14.0, 0.0)
+	var events := []
+	var cb := func(k, o, st, _pt): events.append([Engine.get_physics_frames(), st])
+	p.bumped.connect(cb)
+	ai.bumped.connect(cb)
+	var bumps0 := fb.bumps_seen
+	var sp0 := _count_sparks()
+	var before_p := 0.0
+	var before_ai := 0.0
+	var after_p := 0.0
+	var after_ai := 0.0
+	for i in 60:
+		before_p = p.speed
+		before_ai = ai.speed
+		await _frames(1)
+		if not events.is_empty():
+			after_p = p.speed
+			after_ai = ai.speed
+			break
+	await _frames(3)
+	p.bumped.disconnect(cb)
+	ai.bumped.disconnect(cb)
+	out["bump_events_in_3_ticks"] = events.size()
+	out["rear_end_speeds_before"] = [snappedf(before_p, 0.1), snappedf(before_ai, 0.1)]
+	out["rear_end_speeds_after"] = [snappedf(after_p, 0.1), snappedf(after_ai, 0.1)]
+	var expected_dv := (before_p - before_ai) * 0.3
+	out["front_kart_gain"] = snappedf(after_ai - before_ai, 0.1)
+	out["expected_gain_approx"] = snappedf(expected_dv, 0.1)
+	out["bump_sound"] = fb.played.has("bump") and fb.bumps_seen > bumps0
+	out["bump_sparks"] = _count_sparks() > sp0
+	# --- wall hit + scrape
+	_stage(ai, 300.0, 0.0, 0.0)
+	_stage(p, 50.0, 25.0, 3.0)
+	p.facing_yaw -= 0.5
+	p.move_yaw = p.facing_yaw
+	p.in_steer = 0.4     # keep pushing into the wall -> grind along it
+	p.in_throttle = 1.0
+	var sp1 := _count_sparks()
+	var scraped := 0
+	var wall_snd := false
+	for i in 50:
+		await _frames(1)
+		if p.scraping:
+			scraped += 1
+		wall_snd = wall_snd or fb.played.has("wall")
+	out["wall_sound"] = wall_snd
+	out["wall_sparks"] = _count_sparks() > sp1
+	out["scraping_ticks_of_50"] = scraped
+	out["scrape_loop_playing"] = fb._scrape.playing
+	p.in_steer = 0.0
+	# --- C6: kart at the lens fades
+	var cam: ChaseCamera = race.get_node("ChaseCamera")
+	await _frames(5)
+	ai.place(Transform3D(cam.global_basis, cam.global_position + -cam.global_basis.z * 1.8 + Vector3.DOWN * 0.6))
+	await _frames(3)
+	var kv := ai.get_node("Visual") as KartVisual
+	out["near_camera_fade"] = snappedf(kv._cam_fade, 0.01)
+	p.controller = ctrl
+	ai.controller = ai_ctrl
+	var ok: bool = out["kart_half_width_m"] >= 0.8 and out["bump_events_in_3_ticks"] == 1 \
+			and absf(out["front_kart_gain"] - out["expected_gain_approx"]) < 1.2 and out["front_kart_gain"] > 1.0 \
+			and out["bump_sound"] and out["bump_sparks"] and out["wall_sound"] and out["wall_sparks"] \
+			and out["scraping_ticks_of_50"] >= 10 and out["near_camera_fade"] > 0.5
 	out["pass"] = ok
 	return out

@@ -15,6 +15,7 @@ signal wall_hit(kart: Kart, strength: float)
 signal landed(kart: Kart, air_time: float)
 signal landing_window_opened(kart: Kart)
 signal shield_blocked(kart: Kart, kind: String)
+signal bumped(kart: Kart, other: Kart, strength: float, point: Vector3)
 
 enum Tone { GOOD, BAD, INFO }
 
@@ -71,6 +72,10 @@ var external := Vector3.ZERO
 var slip := 0.0
 var exit_grip_left := 0.0      ## K6: time left in the post-drift grip ramp
 var _wall_cd := 0.0            ## K9: wall impact cooldown
+var scraping := false          ## V1: grinding along a wall this tick (sparks + scrape sound)
+var wall_point := Vector3.ZERO ## last wall contact point (world)
+var stat_bumps := 0
+static var _pair_tick := {}    ## K10: "idA:idB" -> physics frame it was resolved
 
 # --- drift / boost ----------------------------------------------------------------
 var drifting := false
@@ -468,13 +473,14 @@ func _handle_collisions() -> void:
 	_wall_cd = maxf(0.0, _wall_cd - get_physics_process_delta_time())
 	var best_impact := 0.0
 	var best_n := Vector3.ZERO
+	var touching := false
 	var dir := move_dir()
 	for i in get_slide_collision_count():
 		var col := get_slide_collision(i)
 		var n := col.get_normal()
 		var other := col.get_collider()
 		if other is Kart:
-			_bump(other as Kart, n)
+			_bump(other as Kart, n, col.get_position())
 			continue
 		if absf(n.y) > 0.6:
 			continue
@@ -483,9 +489,12 @@ func _handle_collisions() -> void:
 			continue
 		hn = hn.normalized()
 		var impact := -dir.dot(hn)
+		touching = true
+		wall_point = col.get_position()
 		if impact > best_impact:
 			best_impact = impact
 			best_n = hn
+	scraping = touching and absf(speed) > 6.0
 	if best_impact <= 0.05:
 		return
 	var tangent := dir - best_n * dir.dot(best_n)
@@ -504,14 +513,44 @@ func _handle_collisions() -> void:
 	wall_hit.emit(self, impact)
 
 
-func _bump(other: Kart, n: Vector3) -> void:
-	var hn := Vector3(n.x, 0.0, n.z)
+## K10: one resolution per kart pair per tick (whichever kart detects it first),
+## impulse from the closing speed, and rear-ending hands 30% of the speed
+## difference to the kart in front instead of both just bouncing.
+func _bump(other: Kart, n: Vector3, point: Vector3) -> void:
+	var hn := Vector3(n.x, 0.0, n.z)        # points from other towards self
 	if hn.length_squared() < 0.0001:
 		return
 	hn = hn.normalized()
-	external += hn * 3.5
-	other.external -= hn * 3.5
-	speed *= 0.985
+	var a := mini(get_instance_id(), other.get_instance_id())
+	var b := maxi(get_instance_id(), other.get_instance_id())
+	var key := "%d:%d" % [a, b]
+	var frame := Engine.get_physics_frames()
+	if int(_pair_tick.get(key, -100)) >= frame - 6:   # resolved this tick or just now
+		return
+	_pair_tick[key] = frame
+	if _pair_tick.size() > 64:
+		_pair_tick.clear()
+		_pair_tick[key] = frame
+	var v_self := move_dir() * speed
+	var v_other := other.move_dir() * other.speed
+	var closing := maxf(0.0, (v_self - v_other).dot(-hn))
+	var imp := clampf(closing * 0.6, 1.2, 6.0)
+	external += hn * imp * 0.5
+	other.external -= hn * imp * 0.5
+	# rear-end: I'm behind and faster -> push them along, lose some myself
+	var to_other := other.global_position - global_position
+	to_other.y = 0.0
+	if to_other.length_squared() > 0.0001 and forward_dir().dot(to_other.normalized()) > 0.6 and speed > other.speed:
+		var dv := (speed - other.speed) * 0.3
+		other.speed += dv
+		speed -= dv
+	elif other.forward_dir().dot(-to_other.normalized()) > 0.6 and other.speed > speed:
+		var dv2 := (other.speed - speed) * 0.3
+		speed += dv2
+		other.speed -= dv2
+	stat_bumps += 1
+	var strength := clampf(closing / 10.0, 0.1, 1.0)
+	bumped.emit(self, other, strength, point)
 
 
 # ---------------------------------------------------------------------------

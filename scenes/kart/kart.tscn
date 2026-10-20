@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/kart.gd" id="1_kart"]
 [ext_resource type="Resource" path="res://data/kart_config.tres" id="2_cfg"]
@@ -7,6 +7,10 @@
 radius = 0.5
 height = 2.5
 
+[sub_resource type="CapsuleShape3D" id="Capsule_side"]
+radius = 0.45
+height = 1.7
+
 [node name="Kart" type="CharacterBody3D"]
 script = ExtResource("1_kart")
 config = ExtResource("2_cfg")
@@ -14,3 +18,7 @@ config = ExtResource("2_cfg")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0.55, 0)
 shape = SubResource("Capsule_kart")
+
+[node name="SideShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 0.6, 0.1)
+shape = SubResource("Capsule_side")

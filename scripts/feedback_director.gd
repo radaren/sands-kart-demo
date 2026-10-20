@@ -27,6 +27,9 @@ var _item_counts := {}
 var _pool: Array[AudioStreamPlayer] = []
 var _items: ItemSystem
 var _lock_beep := 0.0
+var _scrape: AudioStreamPlayer
+var bumps_seen := 0
+const SPARK := Color(1.0, 0.92, 0.45)
 
 
 func _ready() -> void:
@@ -41,6 +44,16 @@ func _ready() -> void:
 		p.bus = &"Master"
 		add_child(p)
 		_pool.append(p)
+	# V1/K9: looping scrape for the player grinding along a wall
+	_scrape = AudioStreamPlayer.new()
+	if streams.has("scrape"):
+		var w := (streams["scrape"] as AudioStreamWAV).duplicate() as AudioStreamWAV
+		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		w.loop_begin = 0
+		w.loop_end = w.data.size() / 2
+		_scrape.stream = w
+	_scrape.volume_db = -60.0
+	add_child(_scrape)
 	race.karts_spawned.connect(_on_karts)
 	race.countdown_tick.connect(_on_countdown)
 	race.kart_finished.connect(func(k: Kart) -> void:
@@ -58,6 +71,7 @@ func _on_karts(karts: Array) -> void:
 	for k: Kart in karts:
 		_item_counts[k] = k.items.size()
 		k.wall_hit.connect(_on_wall_hit)
+		k.bumped.connect(_on_bumped)
 		k.boosted.connect(_on_boosted)
 		k.hit_taken.connect(_on_hit)
 		k.items_changed.connect(_on_items_changed)
@@ -108,10 +122,25 @@ func _on_countdown(v: int) -> void:
 	play("go" if v == 0 else "beep")
 
 
+func _fx_root() -> Node:
+	return get_parent()
+
+
 func _on_wall_hit(k: Kart, impact: float) -> void:
 	play("wall", k, linear_to_db(clampf(0.35 + impact, 0.2, 1.0)))
+	# sparks fly off the wall, more for harder hits
+	FxLib.burst(_fx_root(), k.wall_point + Vector3.UP * 0.3, SPARK, int(12 + 36 * impact), 6.0 + 8.0 * impact, 0.5, 0.42, -14.0)
 	if k.is_player and camera:
 		camera.add_trauma(0.25 * impact)
+
+
+## K10: kart-kart bump: thud + sparks at the contact, small shake for the player.
+func _on_bumped(k: Kart, other: Kart, strength: float, point: Vector3) -> void:
+	bumps_seen += 1
+	play("bump", k if not other.is_player else other, linear_to_db(clampf(0.4 + strength, 0.3, 1.0)))
+	FxLib.burst(_fx_root(), point + Vector3.UP * 0.2, SPARK, int(10 + 20 * strength), 5.0 + 5.0 * strength, 0.4, 0.38, -14.0)
+	if (k.is_player or other.is_player) and camera:
+		camera.add_trauma(0.12 + 0.2 * strength)
 
 
 func _on_boosted(k: Kart, kind: String) -> void:
@@ -156,7 +185,10 @@ func _on_exploded(pos: Vector3) -> void:
 
 ## H3: missile lock-on beep for the player, faster as it closes in.
 func _process(delta: float) -> void:
-	if _items == null or race.player == null:
+	if race.player == null:
+		return
+	_update_scrape(delta)
+	if _items == null:
 		return
 	var d := _items.incoming_missile(race.player)
 	if d == INF:
@@ -166,3 +198,25 @@ func _process(delta: float) -> void:
 	if _lock_beep <= 0.0:
 		play("warn", null, -4.0)
 		_lock_beep = lerpf(0.08, 0.4, clampf(d / 120.0, 0.0, 1.0))
+
+
+var _scrape_fx := 0.0
+
+
+func _update_scrape(delta: float) -> void:
+	var p := race.player
+	var on := p.scraping and not p.finished
+	var target := linear_to_db(clampf(absf(p.speed) / 30.0, 0.15, 0.9)) if on else -60.0
+	_scrape.volume_db = move_toward(_scrape.volume_db, target, delta * (200.0 if on else 120.0))
+	if on and not _scrape.playing and _scrape.stream:
+		_scrape.play()
+	elif not on and _scrape.playing and _scrape.volume_db <= -59.0:
+		_scrape.stop()
+	# grinding sparks for every kart near the camera
+	_scrape_fx -= delta
+	if _scrape_fx > 0.0:
+		return
+	_scrape_fx = 0.05
+	for k in race.karts:
+		if k.scraping and (camera == null or camera.global_position.distance_to(k.global_position) < 40.0):
+			FxLib.burst(_fx_root(), k.wall_point + Vector3.UP * 0.25, SPARK, 6, 4.0 + absf(k.speed) * 0.12, 0.35, 0.32, -12.0, 60.0)
