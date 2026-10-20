@@ -11,6 +11,8 @@ const BGM := "res://assets/audio/bgm_desert_loop.wav"
 @export var race_path: NodePath = ^"../RaceManager"
 var race: RaceManager
 var _engines := {}
+var engine_pitch_mul := {}    ## W5: per-kart pitch spread (player 1.0, AIs 0.95-1.05)
+var _arng := RandomNumberGenerator.new()   # cosmetic only, kept off the gameplay RNG
 var _tire: AudioStreamPlayer
 var _bgm: AudioStreamPlayer
 
@@ -54,10 +56,14 @@ func _process(_d: float) -> void:
 			p.max_distance = 80.0
 			p.volume_db = -6.0 if k.is_player else -10.0
 			k.add_child(p)
-			p.play()
+			# W5: start each loop at a random point and spread the pitch, so six
+			# identical engines don't phase into one buzzing tone
+			var length: float = p.stream.get_length() if p.stream else 0.0
+			p.play(_arng.randf_range(0.0, maxf(length - 0.05, 0.0)))
 			_engines[k] = p
+			engine_pitch_mul[k] = 1.0 if k.is_player else _arng.randf_range(0.95, 1.05)
 		var pl: AudioStreamPlayer3D = _engines[k]
-		pl.pitch_scale = clampf(0.55 + absf(k.speed) / 28.0, 0.5, 2.0)
+		pl.pitch_scale = clampf((0.55 + absf(k.speed) / 28.0) * float(engine_pitch_mul[k]), 0.5, 2.1)
 	if race.player and _tire.stream:
 		var want := race.player.drifting
 		if want and not _tire.playing:
