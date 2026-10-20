@@ -619,6 +619,7 @@ func _build_item_rows() -> void:
 			area.add_child(cs)
 			holder.add_child(area)
 			area.body_entered.connect(_on_item_box_body.bind(holder))
+			holder.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF  # animated in _process
 			item_box_nodes.append(holder)
 
 

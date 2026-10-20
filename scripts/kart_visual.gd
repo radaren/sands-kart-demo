@@ -151,6 +151,10 @@ var _spin := 0.0
 
 func _ready() -> void:
 	kart = get_parent() as Kart
+	# Driven every rendered frame from the kart's interpolated transform (C1),
+	# so it is top-level and opts out of physics interpolation itself.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	top_level = true
 
 
 func _process(delta: float) -> void:
@@ -174,7 +178,8 @@ func _process(delta: float) -> void:
 	var right := fwd.cross(up).normalized()
 	var f2 := up.cross(right).normalized()
 	var target := Basis(right, up, -f2).orthonormalized()
-	global_basis = global_basis.orthonormalized().slerp(target, clampf(12.0 * delta, 0.0, 1.0))
+	var xf := kart.get_global_transform_interpolated()
+	global_transform = Transform3D(global_basis.orthonormalized().slerp(target, 1.0 - exp(-12.0 * delta)), xf.origin)
 	visible = kart.freeze_time <= 0.0 or int(_t * 10.0) % 2 == 0
 	var dstate := 0
 	if kart.drifting:

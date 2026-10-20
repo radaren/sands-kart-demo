@@ -121,6 +121,10 @@ world_mode="3d"
 template_id="magiclomix.godot-starter"
 template_version="1.0.0"
 
+[physics]
+
+common/physics_interpolation=true
+
 [rendering]
 
 renderer/rendering_method.mobile="forward_plus"

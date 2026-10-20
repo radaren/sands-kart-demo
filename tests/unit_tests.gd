@@ -101,3 +101,33 @@ func t_a_input_map_has_no_ctrl() -> Dictionary:
 			"project_ctrl_actions": proj_ctrl, "web_ctrl_actions": web_ctrl,
 			"web_item_keys": item_keys.map(func(k): return OS.get_keycode_string(k)),
 			"drift_keys": drift_keys.map(func(k): return OS.get_keycode_string(k))}
+
+
+## C1/C2: physics interpolation on, camera reads the kart's interpolated transform
+## in _process and damps heading (a 1.2 rad instant kart yaw change must not
+## jump the view; it converges within ~1 s).
+func t_b_camera_interpolated_and_heading_damped() -> Dictionary:
+	var cam: ChaseCamera = race.get_node("ChaseCamera")
+	var p := rm.player
+	await _wait(1.0)   # kart settled on the grid
+	var interp_ok := cam.target_origin.distance_to(p.get_global_transform_interpolated().origin) < 0.02
+	var cam_yaw := func() -> float:
+		var f := -cam.global_basis.z
+		return atan2(-f.x, -f.z)
+	var y0: float = cam_yaw.call()
+	var saved := [p.facing_yaw, p.move_yaw]
+	p.facing_yaw = wrapf(p.facing_yaw + 1.2, -PI, PI)
+	p.move_yaw = p.facing_yaw
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var step1 := absf(wrapf(cam_yaw.call() - y0, -PI, PI))
+	await _wait(1.0)
+	var after1s := absf(wrapf(cam_yaw.call() - y0, -PI, PI))
+	p.facing_yaw = saved[0]
+	p.move_yaw = saved[1]
+	await _wait(1.0)
+	return {"pass": ProjectSettings.get_setting("physics/common/physics_interpolation") and interp_ok
+			and cam.physics_interpolation_mode == Node.PHYSICS_INTERPOLATION_MODE_OFF and step1 < 0.3 and absf(after1s - 1.2) < 0.08,
+			"interpolation_setting": ProjectSettings.get_setting("physics/common/physics_interpolation"),
+			"camera_uses_interpolated_origin": interp_ok, "yaw_change_first_frames_rad": snappedf(step1, 0.001),
+			"yaw_change_after_1s_rad": snappedf(after1s, 0.001), "kart_yaw_step_rad": 1.2}

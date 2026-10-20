@@ -17,6 +17,17 @@
       },
       "pass": true,
       "test": "t_a_input_map_has_no_ctrl"
+    },
+    {
+      "detail": {
+        "camera_uses_interpolated_origin": true,
+        "interpolation_setting": true,
+        "kart_yaw_step_rad": 1.2,
+        "yaw_change_after_1s_rad": 1.196,
+        "yaw_change_first_frames_rad": 0.067
+      },
+      "pass": true,
+      "test": "t_b_camera_interpolated_and_heading_damped"
     }
   ]
 }
