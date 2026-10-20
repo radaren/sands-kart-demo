@@ -1,0 +1,22 @@
+{
+  "all_pass": true,
+  "results": [
+    {
+      "detail": {
+        "drift_keys": [
+          "Shift",
+          "X"
+        ],
+        "project_ctrl_actions": [],
+        "web_ctrl_actions": [],
+        "web_item_keys": [
+          "Space",
+          "E",
+          "J"
+        ]
+      },
+      "pass": true,
+      "test": "t_a_input_map_has_no_ctrl"
+    }
+  ]
+}

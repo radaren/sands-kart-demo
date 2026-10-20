@@ -14,8 +14,8 @@
 | W / ↑ | 加速（倒计时「2」后按下 = 起步超级喷；漂移结束后点按 = 小喷，紧接再点 = 双喷） |
 | S / ↓ | 刹车 / 倒车 |
 | A D / ← → | 转向 |
-| Shift | 漂移 |
-| Ctrl / Space | 使用道具（2 个道具栏，先用第 1 个） |
+| Shift / X | 漂移（X 是备用键，避免连按 Shift 触发 Windows 粘滞键） |
+| Space / E / J | 使用道具（2 个道具栏，先用第 1 个）；桌面版另可用 Ctrl。网页版不绑定 Ctrl，因为浏览器里 Ctrl+W 会直接关闭标签页 |
 | R | 重生到赛道（3 秒惩罚） |
 | B | 回看 |
 | Esc | 暂停 |
@@ -71,7 +71,7 @@ godot --headless --path . --fixed-fps 60 res://tests/test_runner.tscn -- --test 
 ### English (short)
 
 A 6-kart desert item-race demo in Godot 4.7.2 (GDScript), inspired by the "Sands of Time" track from QQ Speed. It is built on the author's existing project (kart physics, track data and builder, item definitions, assets). On top of that this repo adds AI with rubber-banding, item effects, ranking, race flow, the HUD, headless tests and an auto-deployed web build.
-Controls: W/S throttle and brake, A/D steer, Shift drift, Ctrl/Space item, R respawn, Esc pause.
+Controls: W/S throttle and brake, A/D steer, Shift/X drift, Space/E/J item (desktop also Ctrl; never Ctrl on web because Ctrl+W closes the tab), R respawn, Esc pause.
 Run it by opening `project.godot` in Godot 4.7.2, or play it in the browser at the link above. Some props, the kart model and the BGM are procedural placeholders.
 
 License: MIT (code). Bundled font: SIL OFL 1.1.

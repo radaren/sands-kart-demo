@@ -33,7 +33,7 @@
         "mini_boosts": 1,
         "mini_window_after_release": 0.33,
         "speed_after": 40.0,
-        "speed_before": 32.95,
+        "speed_before": 32.37,
         "was_drifting": true
       },
       "pass": true,
@@ -43,13 +43,13 @@
       "detail": {
         "nitro_active": false,
         "picked": "cloud",
-        "progress_at_pickup": 296.5,
+        "progress_at_pickup": 298.1,
         "shield": false,
         "used_log": [
           {
             "item": "cloud",
             "kart": "Player",
-            "time": 7.16666666666678
+            "time": 6.98333333333344
           }
         ]
       },
@@ -60,20 +60,20 @@
       "detail": {
         "after": [
           "Player",
-          "AI_3",
-          "AI_5",
-          "AI_4",
           "AI_2",
-          "AI_1"
+          "AI_3",
+          "AI_1",
+          "AI_4",
+          "AI_5"
         ],
         "ai_moving": 5,
         "before": [
           "Player",
+          "AI_2",
+          "AI_1",
           "AI_3",
           "AI_4",
-          "AI_5",
-          "AI_1",
-          "AI_2"
+          "AI_5"
         ],
         "player_rank": 1,
         "rubber": {
@@ -102,23 +102,23 @@
         "boost_kinds": {
           "air": 1,
           "landing": 1,
-          "mini": 6,
-          "pad": 5,
+          "mini": 10,
+          "pad": 4,
           "start": 1
         },
-        "items_used_total": 27,
-        "player_finish": "1:42.67",
-        "player_hits": 2,
+        "items_used_total": 30,
+        "player_finish": "1:39.28",
+        "player_hits": 1,
         "race_finished": true,
         "results": [
-          "1 绿洲 1:38.30",
-          "2 阿蓝 1:39.43",
-          "3 小黄 1:39.85",
-          "4 橘子 1:40.58",
-          "5 紫电 1:40.73",
-          "6 你 1:42.67"
+          "1 阿蓝 1:36.32",
+          "2 橘子 1:38.35",
+          "3 小黄 1:39.23",
+          "4 你 1:39.28",
+          "5 紫电 1:39.42",
+          "6 绿洲 1:40.68"
         ],
-        "sim_seconds": 102.7
+        "sim_seconds": 100.7
       },
       "pass": true,
       "test": "race_finished_and_results"

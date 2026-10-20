@@ -85,7 +85,7 @@ func _ready() -> void:
 		tr.add_child(pc)
 		slot_panels.append(pc)
 		slot_labels.append(l)
-	var hint := _label("Ctrl/Space 使用", 14, Color(1, 1, 1, 0.8))
+	var hint := _label(GameConfig.item_key_hint(), 14, Color(1, 1, 1, 0.8))
 	hint.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	hint.position = Vector2(-270, 116)
 	root.add_child(hint)

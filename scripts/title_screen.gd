@@ -72,7 +72,7 @@ func _ready() -> void:
 	box.add_child(btn)
 	btn.grab_focus()
 	var help := Label.new()
-	help.text = "W/↑ 加速(小喷)  S/↓ 刹车  A D/← → 转向  Shift 漂移\nCtrl/Space 道具  R 重生  Esc 暂停"
+	help.text = "W/↑ 加速(小喷)  S/↓ 刹车  A D/← → 转向  Shift/X 漂移\n%s 道具  R 重生  B 回看  Esc 暂停" % ("Space/E" if GameConfig.web_input else "Space/E/Ctrl")
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	help.add_theme_font_size_override("font_size", 18)
 	help.add_theme_color_override("font_color", Color(0.3, 0.18, 0.08))
