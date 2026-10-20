@@ -270,9 +270,50 @@ func _hit_reaction(_delta: float) -> void:
 				yaw = sin(_t * 80.0) * 0.06 * (1.0 - t)
 			_:
 				yaw = TAU * e
-	model.position = Vector3(0, hop, 0)
-	model.rotation = Vector3(pitch, yaw, 0)
+	_posture(_delta)
+	model.position = Vector3(0, hop + spring_y, 0)
+	model.rotation = Vector3(pitch + body_pitch, yaw, body_roll)
+	for i in 2:        # K1: front wheels steer (rotation.x keeps the spin)
+		wheels[i].rotation.y = -kart.steer_state * deg_to_rad(25.0)
 	model.scale = Vector3(1.0 / sqrt(sq), sq, 1.0 / sqrt(sq))
+
+
+## K1: body roll into turns, squat/dive under throttle and brake, nose follows
+## the flight arc in the air, and a damped spring compresses on touchdown.
+var body_roll := 0.0
+var body_pitch := 0.0
+var spring_y := 0.0
+var _spring_v := 0.0
+var _was_grounded := true
+
+
+func _posture(delta: float) -> void:
+	if delta <= 0.0:
+		return
+	var sf := clampf(kart.speed / maxf(1.0, kart.base_top_speed()), 0.0, 1.2)
+	var roll_t := kart.steer_state * sf * deg_to_rad(10.0 if kart.drifting else 6.0)
+	var pitch_t := 0.0
+	if kart.grounded:
+		if kart.in_throttle < -0.1 and kart.speed > 2.0:
+			pitch_t = -deg_to_rad(3.0)      # brake: nose dives
+		elif kart.in_throttle > 0.5 and (kart.is_boosting() or sf < 0.9):
+			pitch_t = deg_to_rad(2.0)       # accelerating: squats, nose up
+	else:
+		var hv := Vector2(kart.velocity.x, kart.velocity.z).length()
+		pitch_t = clampf(atan2(kart.velocity.y, maxf(hv, 1.0)), -0.35, 0.3)
+		roll_t *= 0.4
+	if kart.stun_time > 0.0:
+		roll_t = 0.0
+		pitch_t = 0.0
+	var k := 1.0 - exp(-8.0 * delta)
+	body_roll = lerpf(body_roll, roll_t, k)
+	body_pitch = lerpf(body_pitch, pitch_t, 1.0 - exp(-(10.0 if kart.grounded else 4.0) * delta))
+	if kart.grounded and not _was_grounded:
+		_spring_v = -minf(kart.last_air_time, 1.2) * 3.0
+	_was_grounded = kart.grounded
+	# critically-ish damped spring: k 180, c 14
+	_spring_v += (-180.0 * spring_y - 14.0 * _spring_v) * delta
+	spring_y = clampf(spring_y + _spring_v * delta, -0.35, 0.2)
 
 
 func _on_shield_blocked(_k: Kart, _kind: String) -> void:

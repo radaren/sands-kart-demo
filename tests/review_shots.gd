@@ -71,6 +71,18 @@ func _ready() -> void:
 					await _frames(6)
 					dp.drift_time = dt
 					await _snap("%s_%.1f" % [s, dt])
+			"k1_turn":        # K1: body roll + front-wheel steer in a hard turn
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var tp := rm.player
+				tp.controller = null
+				_teleport(tp, 1000.0)
+				tp.speed = 26.0
+				for i in 24:
+					tp.in_throttle = 1.0
+					tp.in_steer = 1.0
+					await _frames(1)
+				await _snap(s)
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

@@ -293,6 +293,21 @@
       },
       "pass": true,
       "test": "t_r_banana_forward"
+    },
+    {
+      "detail": {
+        "air_pitch_up_down_deg": [
+          3.1,
+          -10.0
+        ],
+        "brake_pitch_deg": -2.8,
+        "front_wheel_yaw_deg": -25.0,
+        "landing_spring_min_m": -0.07,
+        "roll_deg_right_turn": 4.9,
+        "spring_settled_m": 0.0
+      },
+      "pass": true,
+      "test": "t_s_body_posture"
     }
   ]
 }

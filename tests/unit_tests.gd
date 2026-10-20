@@ -914,3 +914,46 @@ func t_r_banana_forward() -> Dictionary:
 	await _clear_items()
 	out["pass"] = out.get("landed_ahead_m", 0.0) > 15.0 and out["ai_hit"] and not out["thrower_hit"]
 	return out
+
+
+## K1: visual posture - roll into turns, brake dive, air pitch, landing spring,
+## front-wheel steer.
+func t_s_body_posture() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var v := p.get_node("Visual") as KartVisual
+	var ctrl := p.controller
+	p.controller = null
+	var out := {}
+	_stage(p, 1000.0, 24.0)
+	for i in 30:
+		p.in_throttle = 1.0; p.in_steer = 1.0
+		await _frames(1)
+	out["roll_deg_right_turn"] = snappedf(rad_to_deg(v.body_roll), 0.1)
+	out["front_wheel_yaw_deg"] = snappedf(rad_to_deg(v.wheels[0].rotation.y), 0.1)
+	for i in 20:
+		p.in_throttle = -1.0; p.in_steer = 0.0
+		await _frames(1)
+	out["brake_pitch_deg"] = snappedf(rad_to_deg(v.body_pitch), 0.1)
+	# air: launch it upward
+	_stage(p, 1100.0, 24.0)
+	await _frames(5)
+	p.in_throttle = 1.0
+	p.velocity.y = 7.0
+	p.grounded = false
+	var max_up := 0.0
+	var min_pitch := 0.0
+	var min_spring := 0.0
+	for i in 150:
+		await _frames(1)
+		max_up = maxf(max_up, v.body_pitch)
+		min_pitch = minf(min_pitch, v.body_pitch)
+		min_spring = minf(min_spring, v.spring_y)
+	out["air_pitch_up_down_deg"] = [snappedf(rad_to_deg(max_up), 0.1), snappedf(rad_to_deg(min_pitch), 0.1)]
+	out["landing_spring_min_m"] = snappedf(min_spring, 0.01)
+	out["spring_settled_m"] = snappedf(v.spring_y, 0.01)
+	p.controller = ctrl
+	out["pass"] = out["roll_deg_right_turn"] > 2.0 and out["front_wheel_yaw_deg"] < -10.0 and out["brake_pitch_deg"] < -1.5 \
+			and max_up > 0.04 and min_pitch < -0.05 and min_spring < -0.03 and absf(v.spring_y) < 0.02
+	return out
