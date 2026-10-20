@@ -41,14 +41,14 @@
     {
       "detail": {
         "nitro_active": false,
-        "picked": "cloud",
-        "progress_at_pickup": 298.5,
+        "picked": "banana",
+        "progress_at_pickup": 300.3,
         "shield": false,
         "used_log": [
           {
-            "item": "cloud",
+            "item": "banana",
             "kart": "Player",
-            "time": 7.41666666666679
+            "time": 7.21666666666678
           }
         ]
       },
@@ -58,29 +58,29 @@
     {
       "detail": {
         "after": [
-          "AI_1",
-          "AI_2",
           "Player",
-          "AI_3",
-          "AI_5",
-          "AI_4"
-        ],
-        "ai_moving": 5,
-        "before": [
           "AI_1",
-          "Player",
           "AI_2",
           "AI_3",
           "AI_4",
           "AI_5"
         ],
-        "player_rank": 3,
+        "ai_moving": 5,
+        "before": [
+          "Player",
+          "AI_1",
+          "AI_2",
+          "AI_3",
+          "AI_4",
+          "AI_5"
+        ],
+        "player_rank": 1,
         "rubber": {
-          "AI_1": 0.991,
-          "AI_2": 0.997,
-          "AI_3": 1.007,
-          "AI_4": 1.013,
-          "AI_5": 1.013,
+          "AI_1": 1.0,
+          "AI_2": 1.0,
+          "AI_3": 1.0,
+          "AI_4": 1.0,
+          "AI_5": 1.0,
           "Player": 1.0
         }
       },
@@ -99,33 +99,33 @@
     {
       "detail": {
         "boost_kinds": {
-          "air": 3,
-          "landing": 2,
-          "mini": 5,
+          "air": 2,
+          "landing": 3,
+          "mini": 7,
           "pad": 5,
           "start": 1
         },
-        "items_used_total": 23,
+        "items_used_total": 20,
         "landing_boosts_by_kart": [
-          "2/3",
+          "3/3",
+          "3/3",
+          "3/3",
           "3/3",
           "2/3",
-          "3/3",
-          "3/3",
-          "3/3"
+          "2/3"
         ],
-        "player_finish": "1:38.03",
-        "player_hits": 1,
+        "player_finish": "1:37.43",
+        "player_hits": 2,
         "race_finished": true,
         "results": [
-          "1 阿蓝 1:35.75",
-          "2 紫电 1:36.15",
-          "3 绿洲 1:37.80",
-          "4 你 1:38.03",
-          "5 橘子 1:38.23",
-          "6 小黄 1:38.67"
+          "1 紫电 1:34.80",
+          "2 小黄 1:35.53",
+          "3 阿蓝 1:35.98",
+          "4 橘子 1:37.28",
+          "5 你 1:37.43",
+          "6 绿洲 1:37.82"
         ],
-        "sim_seconds": 98.7
+        "sim_seconds": 97.8
       },
       "pass": true,
       "test": "race_finished_and_results"

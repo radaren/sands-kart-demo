@@ -162,7 +162,7 @@ func _use(k: Kart, item: int) -> void:
 
 
 ## Item presentation stills: it_<item>[_<phase>]
-const ITEM_S := {"it_missile": 900.0, "it_warning": 1100.0, "it_banana": 1650.0, "it_cloud": 1900.0,
+const ITEM_S := {"it_missile": 900.0, "it_warning": 1100.0, "it_banana": 1650.0, "it_banana_fwd": 1650.0, "it_cloud": 1900.0,
 		"it_shield": 2050.0, "it_lightning": 2250.0, "it_magnet": 700.0, "it_ufo": 2650.0, "it_hud": 1250.0,
 		"it_wall": 1000.0, "it_bump": 1100.0}
 
@@ -207,6 +207,15 @@ func _item_shot(name: String) -> void:
 			_use(ai, ItemDefs.MISSILE)
 			await _frames(14)
 			await _snap(name)
+		"it_banana_fwd":    # I8: player lobs a banana forward (Q)
+			_setup_pair(base, 40.0)
+			await _frames(20)
+			p.set("item_aim", 1)
+			_use(p, ItemDefs.BANANA)
+			await _frames(16)
+			await _snap(name + "_arc")
+			await _frames(24)
+			await _snap(name + "_landed")
 		"it_banana":
 			var ai := _setup_pair(base, 16.0)
 			await _frames(20)

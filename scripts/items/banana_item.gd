@@ -6,12 +6,19 @@ extends ItemEffect
 var _from := Vector3.ZERO
 var _to := Vector3.ZERO
 var _landed := false
+var forward := false
+const FWD_BASE := 9.0
+const FWD_TIME := 0.6
 var peel: Node3D
 
 
 func _ready() -> void:
 	life = 45.0
-	_to = user.global_position - user.forward_dir() * 3.2
+	forward = user.item_aim > 0
+	if forward:   # I8: lob it ahead, clear of the thrower's own path timing
+		_to = user.global_position + user.forward_dir() * (FWD_BASE + maxf(user.speed, 0.0) * FWD_TIME * 1.15)
+	else:
+		_to = user.global_position - user.forward_dir() * 3.2
 	_to.y = ground_y_at(_to) + 0.02
 	_from = user.global_position + Vector3.UP * 1.2
 	global_position = _from
@@ -52,9 +59,9 @@ static func build_peel(root: Node3D) -> void:
 
 func tick(d: float) -> void:
 	if not _landed:
-		var t := clampf(age / 0.35, 0.0, 1.0)
+		var t := clampf(age / (FWD_TIME if forward else 0.35), 0.0, 1.0)
 		var p := _from.lerp(_to, t)
-		p.y += sin(t * PI) * 1.2
+		p.y += sin(t * PI) * (3.0 if forward else 1.2)
 		global_position = p
 		peel.rotation.y += d * 14.0
 		if t >= 1.0:
@@ -65,7 +72,7 @@ func tick(d: float) -> void:
 		return
 	peel.rotation.y += d * 0.6
 	for k: Kart in system.race.karts:
-		if k == user and age < 0.8:
+		if k == user and age < (1.2 if forward else 0.8):
 			continue
 		if k.global_position.distance_to(global_position) < 1.7:
 			k.hit("banana", 0.9, true)

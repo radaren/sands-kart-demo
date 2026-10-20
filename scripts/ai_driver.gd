@@ -21,6 +21,7 @@ extends Node
 @export var start_boost_chance := 0.7
 @export var skill := 0.75          ## 0.55..0.9 (A1): mini boost success = skill, double = skill^2
 
+var _aim_fwd := false
 var kart: Kart
 var _rng := RandomNumberGenerator.new()
 var _mistake_timer := 0.0
@@ -102,12 +103,15 @@ func compute(delta: float) -> void:
 		kart.in_steer = 0.0
 		kart.in_drift = false
 		kart.in_item = false
+		kart.in_item_forward = false
 		kart.in_throttle = 1.0 if (_start_tap_at > 0.0 and clock >= _start_tap_at) else 0.0
 		kart.in_tap = _start_tap_at > 0.0 and clock >= _start_tap_at and clock - delta < _start_tap_at
 		return
 
 	# ---------- steering ----------
 	var look := lerpf(8.0, 15.0, clampf(sp / 25.0, 0.0, 1.0))
+	if kart.cloud_time > 0.0:
+		look *= 0.5        # I8: blinded by ink - shorter look-ahead
 	var ahead := _min_radius(track, s, look + 10.0)
 	var lane := lane_offset
 	if ahead.x < 45.0:
@@ -150,7 +154,7 @@ func compute(delta: float) -> void:
 				mistake_throttle = 0.35
 	_delayed_steer = lerpf(_delayed_steer, steer, 1.0 - exp(-4.0 * delta))
 	if kart.cloud_time > 0.0:
-		steer = clampf(steer + sin(clock * 5.0) * 0.3, -1.0, 1.0)
+		steer = clampf(steer + sin(clock * 5.0) * 0.5, -1.0, 1.0)   # I8: was 0.3
 
 	# ---------- drift into tight corners ----------
 	_drift_cooldown = maxf(0.0, _drift_cooldown - delta)
@@ -211,7 +215,11 @@ func compute(delta: float) -> void:
 		kart.in_item = pressed and not _prev_item_input
 		_prev_item_input = pressed
 	else:
+		_aim_fwd = false
 		kart.in_item = _decide_item(delta, ahead.x)
+		kart.in_item_forward = kart.in_item and _aim_fwd
+		if kart.in_item_forward:
+			kart.in_item = false
 
 
 # ---------- skill model (A1-A3), public for tests ----------
@@ -284,6 +292,9 @@ func _decide_item(delta: float, r_ahead: float) -> bool:
 			use = not leading
 		ItemDefs.LIGHTNING:
 			use = kart.rank >= 3 or (not leading and _rng.randf() < 0.02)
+		ItemDefs.BANANA when gap_ahead > 12.0 and gap_ahead < 30.0 and aggression > 0.5:
+			use = true
+			_aim_fwd = true        # I8: aggressive drivers lob it at the kart ahead
 		ItemDefs.BANANA, ItemDefs.CLOUD:
 			use = (gap_behind < 30.0 and (r_ahead < 45.0 or _rng.randf() < 0.02 + defense * 0.03))
 		ItemDefs.SHIELD:

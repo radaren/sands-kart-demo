@@ -282,6 +282,17 @@
       },
       "pass": true,
       "test": "t_q_item_balance"
+    },
+    {
+      "detail": {
+        "ai_ahead_m": 20.3,
+        "ai_hit": true,
+        "ai_to_peel_m": 3.7,
+        "landed_ahead_m": 24.0,
+        "thrower_hit": false
+      },
+      "pass": true,
+      "test": "t_r_banana_forward"
     }
   ]
 }

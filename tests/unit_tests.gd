@@ -867,3 +867,50 @@ func t_q_item_balance() -> Dictionary:
 	out["pass"] = max_turn <= 2.3 and out["missile_still_hits_straight"] and out["lightning_slow"].x == 4.0 \
 			and out.get("ufo_slow", 0.0) == 5.0 and out["ufo_hover_before_shake_off_s"] > 0.0 and out["ufo_hover_before_shake_off_s"] < 1.2
 	return out
+
+
+## I8: banana thrown forward (Q) lands ahead and hits the kart in front, never
+## the thrower; a clouded AI drifts off its line more.
+func t_r_banana_forward() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var ai := _ai(2)
+	var out := {}
+	_stage(p, 1300.0, 22.0)
+	_stage(ai, 1322.0, 3.0)
+	var actrl := ai.controller
+	ai.controller = null
+	ai.in_throttle = 0.0
+	await _frames(10)
+	var ctrl := p.controller
+	p.controller = null
+	p.in_throttle = 1.0
+	var x0 := p.global_position
+	p.items.clear()
+	p.items.append(ItemDefs.BANANA)
+	p.in_item_forward = true
+	await _frames(1)
+	p.in_item_forward = false
+	await _frames(45)
+	var b := _effects("banana")
+	if not b.is_empty():
+		out["landed_ahead_m"] = snappedf((b[0].global_position - x0).dot(p.forward_dir()), 0.1)
+		out["ai_to_peel_m"] = snappedf(ai.global_position.distance_to(b[0].global_position), 0.1)
+		out["ai_ahead_m"] = snappedf((ai.global_position - x0).dot(p.forward_dir()), 0.1)
+		# drive the AI kart over the peel from just behind it
+		var bs: float = float(rm.track.project(b[0].global_position, p.track_index, 60)["distance"])
+		_stage(ai, bs - 6.0, 10.0)
+	for i in 120:
+		await _frames(1)
+		ai.in_throttle = 1.0; ai.in_steer = 0.0
+		p.in_throttle = -1.0
+		if ai.stun_kind == "banana" or p.stun_kind == "banana":
+			break
+	out["ai_hit"] = ai.stun_kind == "banana"
+	out["thrower_hit"] = p.stun_kind == "banana"
+	ai.controller = actrl
+	p.controller = ctrl
+	await _clear_items()
+	out["pass"] = out.get("landed_ahead_m", 0.0) > 15.0 and out["ai_hit"] and not out["thrower_hit"]
+	return out

@@ -9,6 +9,7 @@ var kart: Kart
 
 var _prev_accel := 0.0
 var _prev_item := false
+var _prev_fwd := false
 
 
 func _ready() -> void:
@@ -39,6 +40,9 @@ func compute(_delta: float) -> void:
 	var item := Input.is_action_pressed("use_item")
 	kart.in_item = item and not _prev_item
 	_prev_item = item
+	var fwd := Input.is_action_pressed("item_forward")
+	kart.in_item_forward = fwd and not _prev_fwd
+	_prev_fwd = fwd
 	kart.look_back = Input.is_action_pressed("look_back")
 	if Input.is_action_just_pressed("respawn"):
 		kart.respawn_on_track()

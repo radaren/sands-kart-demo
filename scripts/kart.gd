@@ -42,6 +42,8 @@ var in_throttle := 0.0
 var in_drift := false
 var in_tap := false        ## accelerate was pressed this tick (mini boost / starts)
 var in_item := false
+var in_item_forward := false   ## I8: Q + item / Q alone throws a banana forward
+var item_aim := -1            ## -1 behind (default), +1 forward; read by the item on spawn
 var look_back := false
 
 # --- race bookkeeping (written by RaceManager) --------------------------------
@@ -219,7 +221,8 @@ func _physics_process(delta: float) -> void:
 	if can_drive:
 		_update_drift(delta)
 		_update_taps(delta)
-		if in_item:
+		if in_item or in_item_forward:
+			item_aim = 1 if in_item_forward else -1
 			use_item()
 	elif drifting:
 		_end_drift(false)
