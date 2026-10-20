@@ -5,6 +5,9 @@ extends ItemEffect
 ## shows a red lock-on arrow and beeps faster as it closes in.
 
 const TOP_SPEED := 58.0
+const TURN_RATE := 2.2
+const WARN_DISTANCE := 87.0   ## ~1.5 s out at top speed: lock-on warning + beeps
+var _ti := 0
 var speed := 18.0
 var dir := Vector3.FORWARD
 var trail_puffs := 0
@@ -16,6 +19,7 @@ var _launch := Vector3.ZERO
 func _ready() -> void:
 	life = 7.0
 	dir = user.forward_dir()
+	_ti = user.track_index
 	global_position = user.global_position + Vector3.UP * 1.1 - dir * 0.4
 	_launch = Vector3.UP * 7.0 + dir * 4.0       # pop up, then tip over towards the target
 	var body := CylinderMesh.new(); body.top_radius = 0.17; body.bottom_radius = 0.17; body.height = 1.2
@@ -55,8 +59,18 @@ func tick(delta: float) -> void:
 		dir = _launch.normalized()
 	else:
 		speed = move_toward(speed, TOP_SPEED, 90.0 * delta)
-		var turn := clampf(delta * (6.0 if age > 0.35 else 3.0), 0.0, 1.0)
-		dir = dir.slerp((goal - global_position).normalized(), turn).normalized()
+		# I7: follow the track centre line until close, then home in; turn rate
+		# capped at 2.2 rad/s so a hard swerve or a mini boost can dodge it
+		var tr := system.race.track
+		if tr != null and is_instance_valid(target) and global_position.distance_to(goal) > 25.0:
+			var proj := tr.project(global_position, _ti, 20)
+			_ti = int(proj["index"])
+			goal = tr.position_at(float(proj["distance"]) + 14.0) + Vector3.UP * 1.2
+		var want := (goal - global_position).normalized()
+		var ang := dir.angle_to(want)
+		var max_turn := TURN_RATE * delta
+		if ang > 0.0001:
+			dir = dir.slerp(want, minf(1.0, max_turn / ang)).normalized()
 		global_position += dir * speed * delta
 	if dir.length_squared() > 0.01 and absf(dir.dot(Vector3.UP)) < 0.99:
 		look_at(global_position + dir, Vector3.UP)

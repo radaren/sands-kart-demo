@@ -29,6 +29,7 @@ var _mistake_check := 5.0
 var _delayed_steer := 0.0
 var _tap_in := -1.0           ## seconds until the next throttle tap
 var _double_pending := false
+var _double_at := 0.2
 var _item_delay := -1.0
 var _item_hold := 0.0
 var _drift_cooldown := 0.0
@@ -62,7 +63,7 @@ func setup(seed_value: int) -> void:
 ## Called by RaceManager during the countdown with the GO clock time.
 func plan_start(go_clock: float) -> void:
 	if _rng.randf() < start_boost_chance:
-		_start_tap_at = go_clock - _rng.randf_range(0.05, 0.4)
+		_start_tap_at = go_clock - _rng.randf_range(0.03, 0.32)   # K13 window is 0.35 s
 	else:
 		_start_tap_at = go_clock + _rng.randf_range(0.5, 0.9)   # late, no super start
 
@@ -172,6 +173,8 @@ func compute(delta: float) -> void:
 				var plan := plan_exit_taps()
 				_tap_in = plan.x           # < 0: missed the mini boost
 				_double_pending = plan.y > 0.5
+				# K4: skilled drivers land the perfect 0.15-0.30 s double more often
+				_double_at = _rng.randf_range(0.16, 0.28) if _rng.randf() < skill else _rng.randf_range(0.31, 0.5)
 	# brake a little if a corner is too tight even for a drift
 	if probe.x < 16.0 and sp > 24.0 and not kart.is_boosting():
 		throttle = 0.6
@@ -183,7 +186,7 @@ func compute(delta: float) -> void:
 		_tap_in -= delta
 		if _tap_in < 0.0:
 			tap = true
-	if _double_pending and kart.double_window > 0.0 and kart.double_delay <= 0.0 and _tap_in < 0.0 and not tap:
+	if _double_pending and kart.double_window > 0.0 and kart.double_elapsed >= _double_at and _tap_in < 0.0 and not tap:
 		tap = true
 		_double_pending = false
 	# air / landing boosts: success = skill * 0.8, decided once per jump (A1)

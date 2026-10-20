@@ -5,6 +5,7 @@ extends ItemEffect
 
 var arrived := false
 var hover := 0.0
+var shake_off := 0.0
 var beam: MeshInstance3D
 var lights: Array[MeshInstance3D] = []
 var sparkle: CPUParticles3D
@@ -58,8 +59,15 @@ func tick(delta: float) -> void:
 	else:
 		global_position = goal + Vector3.UP * sin(hover * 3.0) * 0.15
 		hover += delta
-		target.add_slow("ufo", 9.0, 0.15)
-		if hover >= 4.0:
+		target.add_slow("ufo", 5.0, 0.15)        # I6: was 9 m/s for 4 s
+		# I6 counter-play: boosting or holding a drift shakes the UFO off
+		if target.is_boosting() or target.drifting:
+			shake_off += delta
+		if shake_off >= 0.8:
+			target.announced.emit(target, "甩掉飞碟!", Kart.Tone.GOOD)
+			FxLib.burst(system, global_position, Color(0.6, 1.0, 0.6), 20, 6.0, 0.5, 0.35)
+			finish()
+		elif hover >= 3.0:
 			finish()
 	rotation.y += delta * 4.0
 	for i in lights.size():

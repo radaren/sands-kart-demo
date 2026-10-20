@@ -44,10 +44,23 @@ extends Resource
 @export var mini_boost_time := 1.2
 @export var double_boost_bonus := 9.0
 @export var double_boost_time := 1.0
+## K4: double boost timing (seconds after the mini-boost tap)
+@export var double_window_time := 0.6
+@export var double_min_delay := 0.12     ## tapping earlier fails ("太早")
+@export var double_perfect_from := 0.15
+@export var double_perfect_to := 0.30
+@export var perfect_double_bonus := 10.5
+@export var perfect_double_time := 1.2
+## K5: mini-boost tiers by drift time: blue / orange / purple
+@export var mini_tier_times := PackedFloat32Array([0.45, 1.1, 1.8])
+@export var mini_tier_bonus := PackedFloat32Array([7.5, 9.0, 10.5])
+@export var mini_tier_boost_time := PackedFloat32Array([1.2, 1.4, 1.6])
 @export var super_start_bonus := 12.0
 @export var super_start_time := 2.0
-@export var super_start_early := 0.45
-@export var super_start_late := 0.3
+## K13: tap within 0.35 s before GO (or 0.1 s after); earlier taps disqualify
+@export var super_start_early := 0.35
+@export var super_start_late := 0.1
+@export var super_start_kick := 0.25
 @export var air_boost_bonus := 5.0
 @export var air_boost_time := 1.0
 @export var air_boost_min_air := 0.22

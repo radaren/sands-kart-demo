@@ -56,7 +56,9 @@ func incoming_missile(kart: Kart) -> float:
 	var best := INF
 	for c in get_children():
 		if c is ItemEffect and c.has_method("distance_to_target") and (c as ItemEffect).target == kart:
-			best = minf(best, c.distance_to_target())
+			var d: float = c.distance_to_target()
+			if d < 87.0:     # I7/H3: warn when it arrives within ~1.5 s
+				best = minf(best, d)
 	return best
 
 

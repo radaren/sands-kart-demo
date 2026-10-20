@@ -4,7 +4,7 @@ extends Resource
 
 @export var front_weights := {1: 20, 2: 5, 3: 5, 4: 30, 5: 20, 6: 20, 7: 0, 8: 0}
 @export var middle_weights := {1: 25, 2: 15, 3: 15, 4: 15, 5: 10, 6: 10, 7: 5, 8: 5}
-@export var back_weights := {1: 30, 2: 10, 3: 15, 4: 5, 5: 0, 6: 5, 7: 20, 8: 15}
+@export var back_weights := {1: 35, 2: 12, 3: 15, 4: 8, 5: 0, 6: 5, 7: 10, 8: 15}   # I5: lightning 20 -> 10
 ## When the last place kart trails the leader by more than this many metres it
 ## gets an extra nitro weight.
 @export var far_behind_gap := 150.0

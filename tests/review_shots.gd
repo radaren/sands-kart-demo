@@ -53,6 +53,24 @@ func _ready() -> void:
 				while rm.race_clock < 1.3:
 					await _frames(1)
 				await _snap(s)
+			"cd_window":      # H2/K13: the countdown in the super-start window
+				while rm.state != RaceManager.State.COUNTDOWN or rm.go_clock - rm.race_clock > 0.2:
+					await _frames(1)
+				await _snap(s)
+			"drift_tiers":    # K5: spark colour per mini-boost tier
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var dp := rm.player
+				dp.controller = null
+				_teleport(dp, 1000.0)
+				for dt in [0.6, 1.3, 2.0]:
+					dp.speed = 24.0
+					dp.drifting = true
+					dp.drift_dir = 1
+					dp.drift_time = dt
+					await _frames(6)
+					dp.drift_time = dt
+					await _snap("%s_%.1f" % [s, dt])
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

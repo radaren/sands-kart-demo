@@ -275,6 +275,11 @@ func _on_countdown(v: int) -> void:
 	center_label.text = "GO!" if v == 0 else str(v)
 	center_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4) if v == 0 else Color(1.0, 0.9, 0.3))
 	_center_time = 0.9
+	# H2: 0.25 s pop for each number
+	center_label.pivot_offset = center_label.custom_minimum_size * 0.5
+	center_label.scale = Vector2.ONE * 1.6
+	var tw := center_label.create_tween()
+	tw.tween_property(center_label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _on_announce(_k: Kart, text: String, tone: int) -> void:
@@ -309,7 +314,7 @@ func _process(delta: float) -> void:
 		_update_slots(delta)
 		var incoming := race.item_system.incoming_missile(player) if race.item_system else INF
 		if incoming < 120.0:
-			var rate := lerpf(16.0, 4.0, clampf(incoming / 120.0, 0.0, 1.0))
+			var rate := lerpf(16.0, 4.0, clampf(incoming / 87.0, 0.0, 1.0))
 			lock_warn.visible = true
 			lock_warn.modulate.a = 0.55 + 0.45 * absf(sin(Time.get_ticks_msec() * 0.001 * rate * PI * 0.5))
 			lock_warn.scale = Vector2.ONE * lerpf(1.3, 0.9, clampf(incoming / 120.0, 0.0, 1.0))
@@ -335,6 +340,15 @@ func _process(delta: float) -> void:
 			_tip_time = 0.3
 	if race.state == RaceManager.State.COUNTDOWN and race.race_clock < RaceManager.SETTLE:
 		center_label.text = ""
+	elif race.state == RaceManager.State.COUNTDOWN and player != null:
+		# H2/K13: the number turns green inside the super-start window
+		var left := race.go_clock - race.race_clock
+		var in_window := left <= player.config.super_start_early
+		center_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.35) if in_window else Color(1.0, 0.9, 0.3))
+		if in_window and _tip_time <= 0.0:
+			tip_label.text = "现在按 ↑/W!"
+			tip_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4))
+			_tip_time = 0.1
 	_center_time -= delta
 	if _center_time <= 0.0 and race.state != RaceManager.State.COUNTDOWN:
 		center_label.text = ""

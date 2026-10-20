@@ -212,7 +212,7 @@
         "lightning_box_meshes": 0,
         "lightning_squash": true,
         "missile_exploded": 1,
-        "missile_lock_distance_m": 25.9,
+        "missile_lock_distance_m": 26.0,
         "missile_trail": true,
         "missile_tumble_max_rad": 4.8,
         "missile_use_sound": true,
@@ -247,6 +247,41 @@
       },
       "pass": true,
       "test": "t_o_collision_presentation"
+    },
+    {
+      "detail": {
+        "double_at_s": {
+          "0.05": "fail",
+          "0.20": "perfect",
+          "0.45": "normal"
+        },
+        "glyphs_missing": "",
+        "mini_bonus_by_drift_0.5_1.2_2.0s": [
+          7.5,
+          9.0,
+          10.5
+        ],
+        "start_kick": 0.25,
+        "super_start_by_tap_offset_s": {
+          "-0.30": true,
+          "-0.60": false,
+          "0.05": true,
+          "0.20": false
+        }
+      },
+      "pass": true,
+      "test": "t_p_boost_skill_timing"
+    },
+    {
+      "detail": {
+        "lightning_slow": "(4.0, 2.0)",
+        "missile_max_turn_rad_s": 2.2,
+        "missile_still_hits_straight": true,
+        "ufo_hover_before_shake_off_s": 0.8,
+        "ufo_slow": 5.0
+      },
+      "pass": true,
+      "test": "t_q_item_balance"
     }
   ]
 }

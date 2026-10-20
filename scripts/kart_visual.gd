@@ -148,6 +148,7 @@ func build(color: Color, driver_name: String) -> void:
 
 var kart: Kart
 var name_tag: Label3D
+const SPARK_COLORS := {1: Color(0.85, 0.85, 0.8), 4: Color(0.35, 0.7, 1.0), 2: Color(1.0, 0.55, 0.1), 5: Color(0.8, 0.35, 1.0)}
 var land_ring: MeshInstance3D
 var _cam_fade := 0.0
 var _shield_mat: ShaderMaterial
@@ -219,11 +220,12 @@ func _process(delta: float) -> void:
 	global_transform = Transform3D(global_basis.orthonormalized().slerp(target, 1.0 - exp(-12.0 * delta)), xf.origin)
 	var blink := kart.freeze_time > 0.0 or kart.invuln_time > 0.0
 	visible = not blink or int(_t * (10.0 if kart.freeze_time > 0.0 else 16.0)) % 2 == 0
+	# drift sparks by tier (K5): 1 white (charging), 4 blue, 2 orange, 5 purple
 	var dstate := 0
 	if kart.drifting:
-		dstate = 2 if kart.drift_charged() else 1
+		dstate = [1, 4, 2, 5][kart.drift_tier()]
 	if kart.mini_window > 0.0:
-		dstate = 2
+		dstate = [4, 4, 2, 5][clampi(kart.mini_tier, 0, 3)]
 	if kart.landing_window > 0.0:
 		dstate = 3     # touchdown flash: white sparks = tap now
 	if _ring_t >= 0.0:
@@ -293,12 +295,10 @@ func update_fx(boosting: bool, drift_state: int, shield: bool, wheel_spin: float
 		_spark_mat.emission = Color(0.85, 1.0, 1.0)
 		for sp in sparks:
 			sp.scale = Vector3(2.2, 2.2, 1.6)
-	elif drift_state == 2:
-		_spark_mat.albedo_color = Color(1.0, 0.6, 0.1)
-		_spark_mat.emission = Color(1.0, 0.6, 0.1)
 	else:
-		_spark_mat.albedo_color = Color(0.4, 0.8, 1.0)
-		_spark_mat.emission = Color(0.4, 0.8, 1.0)
+		var c: Color = SPARK_COLORS.get(drift_state, Color(0.4, 0.8, 1.0))
+		_spark_mat.albedo_color = c
+		_spark_mat.emission = c
 	# shield: pops in, shimmers, and bursts (scale up + fade) when it blocks
 	if shield and not _was_shield:
 		_shield_on_t = 0.0

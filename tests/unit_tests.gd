@@ -722,3 +722,148 @@ func t_o_collision_presentation() -> Dictionary:
 			and out["scraping_ticks_of_50"] >= 10 and out["near_camera_fade"] > 0.5
 	out["pass"] = ok
 	return out
+
+
+## K4 K5 K13: mini-boost tiers, double-boost rating, tight start window; the
+## font covers every CJK string the scripts use.
+func t_p_boost_skill_timing() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var ctrl := p.controller
+	p.controller = null
+	var out := {}
+	# K5 tiers
+	var tiers := []
+	for dt in [0.5, 1.2, 2.0]:
+		_stage(p, 60.0, 24.0)
+		p.boosts.clear()
+		p.drifting = true
+		p.drift_dir = 1
+		p.drift_time = dt
+		p._end_drift(true)
+		p.in_tap = true
+		p._update_taps(0.016)
+		tiers.append(snappedf(p.boosts.get("mini", Vector2.ZERO).x, 0.1))
+	out["mini_bonus_by_drift_0.5_1.2_2.0s"] = tiers
+	# K4 double rating
+	var results := {}
+	for when in [0.05, 0.2, 0.45]:
+		p.boosts.clear()
+		p.drifting = true; p.drift_dir = 1; p.drift_time = 0.5
+		p._end_drift(true)
+		p.in_tap = true
+		p._update_taps(0.0)
+		p.in_tap = false
+		var t := 0.0
+		while t < when:
+			p._update_taps(1.0 / 60.0)
+			t += 1.0 / 60.0
+		var perfect0 := p.stat_perfect_doubles
+		var doubles0 := p.stat_doubles
+		p.in_tap = true
+		p._update_taps(1.0 / 60.0)
+		p.in_tap = false
+		results["%.2f" % when] = "perfect" if p.stat_perfect_doubles > perfect0 else ("normal" if p.stat_doubles > doubles0 else "fail")
+	out["double_at_s"] = results
+	p.boosts.clear()
+	p.controller = ctrl
+	# K13 window (pure logic on a fresh kart state)
+	var cfg := p.config
+	var starts := {}
+	for off in [-0.6, -0.3, 0.05, 0.2]:
+		p.boosts.clear()
+		p.start_jumped = false
+		p.start_window = 0.0
+		var go := 100.0
+		p.last_tap_clock = -10.0
+		if off < 0.0:
+			p.last_tap_clock = go + off
+			p.countdown_tap(go + off, go)
+		p.in_throttle = 1.0
+		p.on_race_go(go)
+		if off > 0.0:
+			# tap after GO
+			p.start_window -= off
+			if p.start_window > 0.0:
+				p.in_tap = true
+				p._update_taps(0.0)
+				p.in_tap = false
+		starts["%.2f" % off] = p.boosts.has("start")
+	p.boosts.clear()
+	p.start_jumped = false
+	out["super_start_by_tap_offset_s"] = starts
+	out["start_kick"] = cfg.super_start_kick
+	# font coverage
+	var font: FontFile = load("res://assets/fonts/NotoSansSC-Bold-subset.otf")
+	var missing := ""
+	for f in ["res://scripts/hud_controller.gd", "res://scripts/kart.gd", "res://scripts/items/ufo_item.gd", "res://scripts/title_screen.gd", "res://scripts/game_config.gd"]:
+		for c in FileAccess.get_file_as_string(f):
+			if c.unicode_at(0) > 0x2E80 and not font.has_char(c.unicode_at(0)) and not missing.contains(c):
+				missing += c
+	out["glyphs_missing"] = missing
+	out["pass"] = tiers == [7.5, 9.0, 10.5] and results == {"0.05": "fail", "0.20": "perfect", "0.45": "normal"} \
+			and starts == {"-0.60": false, "-0.30": true, "0.05": true, "0.20": false} and missing == ""
+	return out
+
+
+## I5 I6 I7: lightning 4 m/s x 2 s, UFO 5 m/s x 3 s and can be shaken off by
+## boosting, missile turn rate capped at 2.2 rad/s.
+func t_q_item_balance() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var ai := _ai(1)
+	var out := {}
+	_stage(p, 900.0, 22.0)
+	_stage(ai, 940.0, 20.0)
+	await _frames(20)
+	rm.item_system.use_item(p, ItemDefs.MISSILE)
+	await _frames(1)
+	var ms := _effects("missile")
+	var max_turn := 0.0
+	var prev: Vector3 = ms[0].dir
+	for i in 90:
+		await _frames(1)
+		if not is_instance_valid(ms[0]) or ms[0].is_queued_for_deletion():
+			break
+		if ms[0].age > 0.25:
+			max_turn = maxf(max_turn, prev.angle_to(ms[0].dir) * 60.0)
+		prev = ms[0].dir
+	out["missile_max_turn_rad_s"] = snappedf(max_turn, 0.01)
+	out["missile_still_hits_straight"] = ai.stun_kind == "missile" and ai.stat_hits > 0
+	await _clear_items()
+	await _wait(1.3)
+	# lightning slow
+	_stage(ai, 980.0, 20.0)
+	await _frames(10)
+	ai.hit("lightning", 0.5, true, 4.0, 2.0)
+	out["lightning_slow"] = ai.slows.get("lightning", Vector2.ZERO)
+	await _clear_items()
+	await _wait(1.3)
+	# UFO: shake off by boosting
+	_stage(p, 1100.0, 22.0)
+	_stage(ai, 1120.0, 22.0)
+	await _frames(20)
+	var t0 := rm.race_clock
+	rm.item_system.use_item(p, ItemDefs.UFO)
+	var arrived_at := -1.0
+	var gone_at := -1.0
+	for i in 400:
+		await _frames(1)
+		var u := _effects("ufo")
+		if u.is_empty():
+			gone_at = rm.race_clock
+			break
+		if u[0].arrived and arrived_at < 0.0:
+			arrived_at = rm.race_clock
+			out["ufo_slow"] = 0.0
+		if arrived_at > 0.0:
+			var tk: Kart = u[0].target
+			out["ufo_slow"] = maxf(float(out.get("ufo_slow", 0.0)), tk.slows.get("ufo", Vector2.ZERO).x)
+			tk.add_boost("nitro", 6.0, 0.2, 0.0)       # the target boosts to shake it off
+	out["ufo_hover_before_shake_off_s"] = snappedf(gone_at - arrived_at, 0.01)
+	await _clear_items()
+	out["pass"] = max_turn <= 2.3 and out["missile_still_hits_straight"] and out["lightning_slow"].x == 4.0 \
+			and out.get("ufo_slow", 0.0) == 5.0 and out["ufo_hover_before_shake_off_s"] > 0.0 and out["ufo_hover_before_shake_off_s"] < 1.2
+	return out

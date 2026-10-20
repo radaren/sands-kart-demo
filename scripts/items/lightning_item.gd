@@ -14,7 +14,7 @@ func _ready() -> void:
 	for k: Kart in system.race.karts:
 		if k == user or k.rank >= user.rank or k.finished:
 			continue
-		var landed := k.hit("lightning", 0.5, true, 8.0, 3.0)
+		var landed := k.hit("lightning", 0.5, true, 4.0, 2.0)   # I5: was 8 m/s for 3 s
 		if landed and k.is_player:
 			player_hit = true
 		var top := k.global_position + Vector3(_rng.randf_range(-3, 3), 38.0, _rng.randf_range(-3, 3))

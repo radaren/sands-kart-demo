@@ -24,7 +24,7 @@ const LAYER_KART := 2
 const LAYER_WALL := 8
 const MAX_ITEMS := 2
 ## K12: share of the entry speed a hit leaves you with (instead of stopping dead).
-const HIT_RETAIN := {"banana": 0.45, "lightning": 0.55, "missile": 0.15}
+const HIT_RETAIN := {"banana": 0.45, "lightning": 0.6, "missile": 0.15}
 const HIT_RETAIN_DEFAULT := 0.35
 
 @export var config: KartConfig
@@ -92,6 +92,11 @@ var _tap_buffer := 0.0            ## floor snap disabled right after a launch
 var stat_landing_boosts := 0
 var stat_launches := 0
 var start_window := 0.0
+var start_jumped := false      ## K13: tapped too early in the countdown
+var mini_tier := 0             ## K5: tier of the pending / last mini boost (1..3)
+var double_elapsed := 0.0      ## K4: time since the mini-boost tap
+var stat_perfect_doubles := 0
+var stat_doubles := 0
 var boosts := {}            ## kind -> Vector2(bonus, remaining)
 var slows := {}             ## kind -> Vector2(amount, remaining)
 var stun_time := 0.0
@@ -170,6 +175,17 @@ func drift_charged() -> bool:
 	return drifting and drift_time >= config.mini_boost_min_drift
 
 
+## K5: 0 = not charged, 1 blue (>=0.45 s), 2 orange (>=1.1 s), 3 purple (>=1.8 s)
+func drift_tier() -> int:
+	if not drifting:
+		return 0
+	var t := 0
+	for i in config.mini_tier_times.size():
+		if drift_time >= config.mini_tier_times[i]:
+			t = i + 1
+	return t
+
+
 func kmh() -> float:
 	return absf(speed) * 3.6
 
@@ -194,6 +210,8 @@ func _physics_process(delta: float) -> void:
 		controller.compute(delta)
 	if in_tap and race != null:
 		last_tap_clock = race.race_clock
+		if controls_locked and race.get("go_clock") != null:
+			countdown_tap(race.race_clock, float(race.get("go_clock")))
 	_tick_effects(delta)
 	var can_drive := not controls_locked and freeze_time <= 0.0 and stun_time <= 0.0
 	var steer := clampf(in_steer, -1.0, 1.0) if can_drive else 0.0
@@ -258,6 +276,7 @@ func _update_drift(delta: float) -> void:
 func _end_drift(qualified: bool) -> void:
 	if drifting:
 		exit_grip_left = config.exit_grip_time
+		mini_tier = maxi(1, drift_tier())
 	drifting = false
 	drift_dir = 0
 	if qualified:
@@ -276,20 +295,32 @@ func _update_taps(delta: float) -> void:
 		mini_window -= delta
 		if in_tap:
 			mini_window = 0.0
-			add_boost("mini", config.mini_boost_bonus, config.mini_boost_time)
-			double_window = 0.6
-			double_delay = 0.12
+			var ti := clampi(mini_tier, 1, config.mini_tier_bonus.size()) - 1
+			add_boost("mini", config.mini_tier_bonus[ti], config.mini_tier_boost_time[ti])
+			double_window = config.double_window_time
+			double_delay = config.double_min_delay
+			double_elapsed = 0.0
 			stat_mini_boosts += 1
-			announced.emit(self, "小喷!", Tone.GOOD)
+			announced.emit(self, ["小喷!", "橙色小喷!", "紫色小喷!"][ti], Tone.GOOD)
 			return
 	elif double_window > 0.0:
 		double_window -= delta
 		double_delay -= delta
-		if in_tap and double_delay <= 0.0:
+		double_elapsed += delta
+		if in_tap:
 			double_window = 0.0
+			if double_elapsed < config.double_min_delay:
+				announced.emit(self, "太早!", Tone.BAD)     # K4: mashing fails
+				return
 			var remaining: Vector2 = boosts.get("mini", Vector2.ZERO)
-			add_boost("mini", config.double_boost_bonus, remaining.y + config.double_boost_time)
-			announced.emit(self, "双喷!", Tone.GOOD)
+			stat_doubles += 1
+			if double_elapsed >= config.double_perfect_from and double_elapsed <= config.double_perfect_to:
+				stat_perfect_doubles += 1
+				add_boost("mini", config.perfect_double_bonus, remaining.y + config.perfect_double_time)
+				announced.emit(self, "完美双喷!", Tone.GOOD)
+			else:
+				add_boost("mini", config.double_boost_bonus, remaining.y + config.double_boost_time)
+				announced.emit(self, "双喷!", Tone.GOOD)
 			return
 	if landing_window > 0.0:
 		landing_window -= delta
@@ -311,10 +342,22 @@ func _update_taps(delta: float) -> void:
 
 
 ## Called by the race manager the moment the light turns green.
+## K13: a tap in the countdown more than super_start_early before GO jumps the
+## start (no boost this race start); a tap in [GO-0.35, GO] or up to 0.1 s after
+## GO gives the super start.
+func countdown_tap(clock: float, go_clock: float) -> void:
+	if clock < go_clock - config.super_start_early and clock > go_clock - 1.5:
+		if not start_jumped:
+			start_jumped = true
+			announced.emit(self, "起步过早!", Tone.BAD)
+
+
 func on_race_go(clock: float) -> void:
 	controls_locked = false
-	var pressed_recently := last_tap_clock >= clock - config.super_start_early and last_tap_clock <= clock + 0.05
-	if in_throttle > 0.5 and pressed_recently:
+	var pressed_recently := last_tap_clock >= clock - config.super_start_early and last_tap_clock <= clock + 0.02
+	if start_jumped:
+		start_window = 0.0
+	elif in_throttle > 0.5 and pressed_recently:
 		_super_start()
 	else:
 		start_window = config.super_start_late
@@ -322,7 +365,7 @@ func on_race_go(clock: float) -> void:
 
 func _super_start() -> void:
 	start_window = 0.0
-	add_boost("start", config.super_start_bonus, config.super_start_time, 0.6)
+	add_boost("start", config.super_start_bonus, config.super_start_time, config.super_start_kick)
 	announced.emit(self, "超级起步!", Tone.GOOD)
 
 
