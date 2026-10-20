@@ -144,6 +144,34 @@
       },
       "pass": true,
       "test": "t_k_wall_hit_single_resolution"
+    },
+    {
+      "detail": {
+        "double_rate": 0.493,
+        "mini_success_rate": 0.694,
+        "mistake_rate_per_check": 0.255,
+        "roster_skills": [
+          0.8,
+          0.55,
+          0.72,
+          0.62,
+          0.9
+        ],
+        "shield_chance_def0.5": 0.65,
+        "shield_delay_range_s": [
+          0.25,
+          0.59
+        ],
+        "skill": 0.7,
+        "steer_mistakes_left_right": [
+          128,
+          123
+        ],
+        "tap_delay_mean_s": 0.12,
+        "taps_too_late_pct": 0.0
+      },
+      "pass": true,
+      "test": "t_l_ai_skill_model"
     }
   ]
 }

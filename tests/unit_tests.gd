@@ -370,3 +370,62 @@ func t_k_wall_hit_single_resolution() -> Dictionary:
 		ok = ok and int(r["wall_hit_events_in_0.15s"]) == 1 and absf(float(r.loss) - float(r.expected_loss)) < 0.04
 	out["pass"] = ok
 	return out
+
+
+## A1: mini boost success ~ skill, double ~ skill^2, tap delay ~ N(0.12, 0.05);
+## A2: shield reaction 0.25-0.6 s, chance 0.4+0.5*defense;
+## A3: mistakes ~ mistake_rate per 5 s check, both steering directions.
+func t_l_ai_skill_model() -> Dictionary:
+	var ai := AIDriver.new()
+	ai.setup(1234)
+	ai.skill = 0.7
+	ai.defense = 0.5
+	ai.mistake_rate = 0.25
+	var n := 4000
+	var mini := 0
+	var dbl := 0
+	var delays := []
+	for i in n:
+		var p := ai.plan_exit_taps()
+		if p.x >= 0.0:
+			mini += 1
+			delays.append(p.x)
+		if p.y > 0.5:
+			dbl += 1
+	var mean := 0.0
+	for d in delays:
+		mean += d
+	mean /= maxf(1.0, delays.size())
+	var late := delays.filter(func(d): return d > 0.35).size()
+	var rmin := 9.0
+	var rmax := 0.0
+	for i in 500:
+		var r := ai.shield_reaction_delay()
+		rmin = minf(rmin, r)
+		rmax = maxf(rmax, r)
+	var mistakes := 0
+	var left := 0
+	var right := 0
+	for i in n:
+		if ai.roll_mistake():
+			mistakes += 1
+			if ai._mistake_kind == 0:
+				if ai._mistake_steer < 0.0: left += 1
+				else: right += 1
+	var chance := ai.shield_chance()
+	ai.free()
+	var roster_skills := []
+	for k in rm.karts:
+		var d := k.get_node_or_null("AIDriver") as AIDriver
+		if d and not k.is_player:
+			roster_skills.append(d.skill)
+	var mini_rate := float(mini) / n
+	var dbl_rate := float(dbl) / n
+	var m_rate := float(mistakes) / n
+	return {"pass": absf(mini_rate - 0.7) < 0.03 and absf(dbl_rate - 0.49) < 0.03 and absf(mean - 0.12) < 0.01
+			and rmin >= 0.25 and rmax <= 0.6 and absf(chance - 0.65) < 0.001 and absf(m_rate - 0.25) < 0.03
+			and left > 50 and right > 50 and roster_skills.size() == 5 and roster_skills.min() >= 0.55 and roster_skills.max() <= 0.9,
+			"skill": 0.7, "mini_success_rate": snappedf(mini_rate, 0.001), "double_rate": snappedf(dbl_rate, 0.001),
+			"tap_delay_mean_s": snappedf(mean, 0.001), "taps_too_late_pct": snappedf(100.0 * late / maxf(1, delays.size()), 0.1),
+			"shield_delay_range_s": [snappedf(rmin, 0.01), snappedf(rmax, 0.01)], "shield_chance_def0.5": 0.65,
+			"mistake_rate_per_check": snappedf(m_rate, 0.001), "steer_mistakes_left_right": [left, right], "roster_skills": roster_skills}

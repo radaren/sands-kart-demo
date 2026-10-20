@@ -22,13 +22,13 @@ const SETTLE := 0.6            ## karts drop onto the grid before "3"
 const RESULTS_WAIT := 12.0     ## after the player finishes, wait this long for the AI
 
 const ROSTER := [
-	# name, colour, aggression, defense, mistake_rate, lane, rival
-	["你", Color(0.92, 0.16, 0.12), 0.0, 0.0, 0.0, 0.0, false],
-	["阿蓝", Color(0.15, 0.4, 0.95), 0.45, 0.6, 0.06, -1.2, false],
-	["小黄", Color(1.0, 0.82, 0.1), 0.35, 0.3, 0.08, 1.4, false],
-	["绿洲", Color(0.2, 0.75, 0.3), 0.55, 0.7, 0.05, 0.6, false],
-	["橘子", Color(1.0, 0.5, 0.08), 0.6, 0.4, 0.07, -0.5, false],
-	["紫电", Color(0.6, 0.25, 0.9), 0.8, 0.5, 0.02, 0.2, true],   # 宿敌 rival
+	# name, colour, aggression, defense, mistake_rate (per 5 s), lane, rival, skill
+	["你", Color(0.92, 0.16, 0.12), 0.0, 0.0, 0.0, 0.0, false, 0.95],
+	["阿蓝", Color(0.15, 0.4, 0.95), 0.45, 0.6, 0.18, -1.2, false, 0.8],
+	["小黄", Color(1.0, 0.82, 0.1), 0.35, 0.3, 0.3, 1.4, false, 0.55],
+	["绿洲", Color(0.2, 0.75, 0.3), 0.55, 0.7, 0.2, 0.6, false, 0.72],
+	["橘子", Color(1.0, 0.5, 0.08), 0.6, 0.4, 0.25, -0.5, false, 0.62],
+	["紫电", Color(0.6, 0.25, 0.9), 0.8, 0.5, 0.15, 0.2, true, 0.9],   # 宿敌 rival
 ]
 
 @export var max_laps := 1
@@ -104,12 +104,15 @@ func _spawn_karts() -> void:
 			if kart.is_player:
 				ai.manual_items = true      # autopilot (tests): items still from Input
 				ai.start_boost_chance = 1.0
+				ai.skill = r[7]
+				ai.mistake_rate = 0.0
 			else:
 				ai.aggression = r[2]
 				ai.defense = r[3]
 				ai.mistake_rate = r[4]
 				ai.lane_offset = r[5]
 				ai.is_rival = r[6]
+				ai.skill = r[7]
 				var rb := AIRubberBand.new()
 				rb.name = "RubberBand"
 				rb.kart = kart
