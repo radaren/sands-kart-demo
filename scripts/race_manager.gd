@@ -119,6 +119,8 @@ func _spawn_karts() -> void:
 				rb.kart = kart
 				rb.race_manager = self
 				kart.add_child(rb)
+				# A6: each AI aims for its own gap to the player; the rival sits just ahead
+				rb.target_gap = 20.0 if ai.is_rival else [-60.0, -25.0, 15.0, 45.0, 80.0][i % 5]
 				if ai.is_rival:
 					kart.base_speed_bias = 1.03
 				kart.speed_scale = kart.base_speed_bias

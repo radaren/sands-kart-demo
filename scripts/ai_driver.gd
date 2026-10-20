@@ -47,6 +47,10 @@ var stat_mini_attempts := 0
 var stat_mini_planned := 0
 var stat_double_planned := 0
 var stat_mistakes := 0
+var _lane_s := 0.0
+var stat_steer_jitter := 0.0     ## sum |d steer| (A5 measure)
+var stat_ticks := 0
+var _prev_out_steer := 0.0
 var _box_row_s := -1.0
 var _box_go := false
 
@@ -109,11 +113,12 @@ func compute(delta: float) -> void:
 		return
 
 	# ---------- steering ----------
-	var look := lerpf(8.0, 15.0, clampf(sp / 25.0, 0.0, 1.0))
+	var look := clampf(0.8 * sp, 12.0, 28.0)    # A5: 0.8 s of travel (was 8-15 m)
 	if kart.cloud_time > 0.0:
 		look *= 0.5        # I8: blinded by ink - shorter look-ahead
 	var ahead := _min_radius(track, s, look + 10.0)
 	var lane := lane_offset
+	var lane_rate := 3.0
 	if ahead.x < 45.0:
 		var inside := ahead.y * -(1.2 + 2.2 * aggression)   # right turn (-1) -> +lateral (right)
 		lane = lerpf(lane * 0.4, inside, clampf((45.0 - ahead.x) / 25.0, 0.0, 1.0))
@@ -126,14 +131,26 @@ func compute(delta: float) -> void:
 				_box_go = _rng.randf() < 0.7 + 0.25 * aggression
 			if _box_go:
 				lane = bl
+				lane_rate = 7.0       # committing to a box needs a quicker line change
+				look = minf(look, 13.0)   # and tighter tracking to hit a 1.35 m reach
+	_lane_s = move_toward(_lane_s, lane, lane_rate * delta)    # A4/A5: lane changes at <= 3 m/s
+	lane = _lane_s
 	var target := track.position_at(s + look) + track.right_at(s + look) * lane
 	var to := target - kart.global_position
 	var desired := atan2(-to.x, -to.z)
 	var diff := wrapf(desired - kart.facing_yaw, -PI, PI)
-	var steer := clampf(-diff * 2.4, -1.0, 1.0)
+	# A5: pure pursuit - the yaw rate that arcs onto the look-ahead point,
+	# divided by the kart's max yaw rate at this speed - plus a damping term on
+	# a wall push that grows with distance. (A lateral-rate damping term was
+	# tried and tripled the steering jitter - kart.lateral is too noisy.)
+	var dist := maxf(to.length(), 4.0)
+	var yaw_rate_need := 2.0 * maxf(sp, 4.0) * sin(diff) / dist
+	var frac := clampf(sp / kart.config.max_speed, 0.0, 1.0)
+	var max_rate := lerpf(kart.config.turn_rate_low, kart.config.turn_rate_high, frac) * clampf(sp / 4.0, 0.25, 1.0)
+	var steer := clampf(-yaw_rate_need / maxf(max_rate, 0.3), -1.0, 1.0)
 	var half := track.road_width * 0.5
-	if absf(kart.lateral) > half - 1.4:
-		steer = clampf(steer - signf(kart.lateral) * 0.45, -1.0, 1.0)
+	var wall_k := smoothstep(half - 2.4, half - 0.6, absf(kart.lateral))
+	steer = clampf(steer - signf(kart.lateral) * 0.5 * wall_k, -1.0, 1.0)
 
 	# ---------- mistakes (A3) ----------
 	_mistake_check -= delta
@@ -207,6 +224,9 @@ func compute(delta: float) -> void:
 		tap = true
 
 	kart.in_steer = steer
+	stat_steer_jitter += absf(steer - _prev_out_steer)
+	_prev_out_steer = steer
+	stat_ticks += 1
 	kart.in_throttle = throttle
 	kart.in_drift = _want_drift and (kart.drifting or probe.x < drift_radius)
 	kart.in_tap = tap

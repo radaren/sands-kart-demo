@@ -1045,3 +1045,33 @@ func t_u_hud_flow() -> Dictionary:
 			and out["meter_kind"] == "nitro" and out["meter_idle"] == 0.0 and out["rank_changes"] >= 1 and out["overtake_tip"] != "" \
 			and out["lap_label"] == "圈数 1/1"
 	return out
+
+
+## A6: rubber band aims at a per-AI target gap, has a ±25 m dead zone, ±8 %
+## cap, and fades out over the last 15 % of the race.
+func t_v_rubber_band() -> Dictionary:
+	await _until_racing()
+	await _wait(maxf(0.0, 10.5 - rm.race_time))
+	var ai := _ai(2)
+	var rb := ai.get_node("RubberBand") as AIRubberBand
+	var p := rm.player
+	var out := {"target_gap": rb.target_gap}
+	var cases := {}
+	for off in [0.0, -300.0, 300.0]:
+		_stage(p, 1500.0, 20.0)
+		_stage(ai, 1500.0 + rb.target_gap + off, 20.0)
+		await _frames(2)
+		cases["%d" % int(off)] = snappedf(rb.compute_target(), 0.001)
+	out["target_by_error_m"] = cases
+	_stage(p, rm.track.length - 60.0, 20.0)
+	_stage(ai, rm.track.length - 60.0 - 300.0, 20.0)
+	await _frames(2)
+	out["near_finish_far_behind"] = snappedf(rb.compute_target(), 0.001)
+	var gaps := []
+	for k in rm.karts:
+		var r := k.get_node_or_null("RubberBand") as AIRubberBand
+		if r:
+			gaps.append(r.target_gap)
+	out["all_target_gaps"] = gaps
+	out["pass"] = cases["0"] == 1.0 and cases["-300"] == 1.08 and cases["300"] == 0.92 and out["near_finish_far_behind"] < 1.02
+	return out

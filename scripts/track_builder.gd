@@ -674,13 +674,21 @@ func _on_item_box_body(body: Node3D, holder: Node3D) -> void:
 			(holder.get_node("Mark") as Node3D).visible = true)
 
 
+var _bob_t := 0.0
+
+
 func _process(delta: float) -> void:
-	var t := Time.get_ticks_msec() / 1000.0
+	# Only the visuals spin and bob; the holder (and its trigger) stays put, so
+	# pickups don't depend on the bob phase / frame timing (that made the same
+	# seed pass or fail between runs).
+	_bob_t += delta
 	for holder in item_box_nodes:
-		holder.rotate_y(delta * 1.6)
-		var base_y: float = holder.get_meta("base_y", holder.position.y)
 		var phase: float = holder.get_meta("phase", 0.0)
-		holder.position.y = base_y + sin(t * 2.0 + phase) * 0.18
+		var y := sin(_bob_t * 2.0 + phase) * 0.18
+		var m := holder.get_node("Mesh") as Node3D
+		m.rotate_y(delta * 1.6)
+		m.position.y = y
+		(holder.get_node("Mark") as Node3D).position.y = y
 
 
 ## Lateral offset of the active item box closest to `lateral` in the first row

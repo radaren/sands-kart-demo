@@ -96,6 +96,7 @@ var stat_launches := 0
 var start_window := 0.0
 var start_jumped := false      ## K13: tapped too early in the countdown
 var mini_tier := 0             ## K5: tier of the pending / last mini boost (1..3)
+var stat_wall_hits := 0
 var boost_full := {}           ## kind -> duration when it was (re)filled (H5)
 var double_elapsed := 0.0      ## K4: time since the mini-boost tap
 var stat_perfect_doubles := 0
@@ -557,6 +558,7 @@ func _handle_collisions() -> void:
 	external += best_n * (config.wall_push_base + config.wall_push_impact * impact)
 	if drifting and impact > 0.3:
 		_end_drift(false)
+	stat_wall_hits += 1
 	wall_hit.emit(self, impact)
 
 

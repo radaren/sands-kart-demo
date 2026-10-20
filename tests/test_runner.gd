@@ -168,6 +168,8 @@ func _run() -> void:
 			{"race_finished": rm.race_finished, "player_finish": RaceManager.format_time(player.finish_time), "results": times,
 			"boost_kinds": boost_kinds, "player_hits": player.stat_hits,
 			"landing_boosts_by_kart": rm.karts.map(func(k): return "%d/%d" % [k.stat_landing_boosts, k.stat_launches]), "items_used_total": rm.item_system.used_log.size(),
+			"ai_wall_hits": rm.karts.filter(func(k): return not k.is_player).map(func(k): return k.stat_wall_hits),
+			"ai_steer_jitter_per_s": rm.karts.filter(func(k): return not k.is_player).map(func(k): var a = k.get_node("AIDriver"); return snappedf(a.stat_steer_jitter / maxf(a.stat_ticks, 1) * 60.0, 0.01)),
 			"sim_seconds": snappedf(rm.race_time, 0.1)})
 
 	var all_ok: bool = results.all(func(r): return r.pass)

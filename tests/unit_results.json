@@ -214,7 +214,7 @@
         "missile_exploded": 1,
         "missile_lock_distance_m": 26.0,
         "missile_trail": true,
-        "missile_tumble_max_rad": 4.8,
+        "missile_tumble_max_rad": 4.97,
         "missile_use_sound": true,
         "new_materials_on_2nd_missile": 0,
         "shield_break_sound": true,
@@ -285,9 +285,9 @@
     },
     {
       "detail": {
-        "ai_ahead_m": 20.3,
+        "ai_ahead_m": 20.5,
         "ai_hit": true,
-        "ai_to_peel_m": 3.7,
+        "ai_to_peel_m": 3.5,
         "landed_ahead_m": 24.0,
         "thrower_hit": false
       },
@@ -312,7 +312,7 @@
     {
       "detail": {
         "dust": 21,
-        "dust_in_1s_straight": 7,
+        "dust_in_1s_straight": 8,
         "flames": 16,
         "landing_dust": 1,
         "skid_quads": 34,
@@ -338,6 +338,26 @@
       },
       "pass": true,
       "test": "t_u_hud_flow"
+    },
+    {
+      "detail": {
+        "all_target_gaps": [
+          -25.0,
+          15.0,
+          45.0,
+          80.0,
+          20.0
+        ],
+        "near_finish_far_behind": 1.0,
+        "target_by_error_m": {
+          "-300": 1.08,
+          "0": 1.0,
+          "300": 0.92
+        },
+        "target_gap": 15.0
+      },
+      "pass": true,
+      "test": "t_v_rubber_band"
     }
   ]
 }
