@@ -59,6 +59,7 @@ func build() -> void:
 	_build_item_rows()
 	var t2 := Time.get_ticks_usec()
 	_build_scenery()
+	_build_roadside_band()
 	build_ms["scenery"] = (Time.get_ticks_usec() - t2) / 1000.0
 	build_ms["total"] = (Time.get_ticks_usec() - t0) / 1000.0
 	print("TRACK BUILD ms ", build_ms)
@@ -836,6 +837,114 @@ func _build_scenery() -> void:
 		s += rng.randf_range(14.0, 22.0) if in_town else rng.randf_range(22.0, 38.0)
 	_place_town_arches(grape, cloud)
 	_place_backdrop(far_pool, dune_pool, rng)
+
+
+# ---------------------------------------------------------------------------
+# T7: near-roadside band
+# ---------------------------------------------------------------------------
+const BAND_FLAG_COLORS := [Color(0.85, 0.18, 0.12), Color(0.97, 0.80, 0.25), Color(0.16, 0.45, 0.80), Color(0.95, 0.95, 0.9)]
+var band_counts := {}    ## T7: instance counts per band layer (for tests)
+var band_origins := {}   ## T7: instance positions per layer (the headless renderer can't read MultiMesh back)
+
+
+func _band_mm(node_name: String, mesh: Mesh, mat: Material, xforms: Array, colors: Array) -> void:
+	if xforms.is_empty():
+		return
+	mesh.surface_set_material(0, mat)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = not colors.is_empty()
+	mm.mesh = mesh
+	mm.instance_count = xforms.size()
+	for i in xforms.size():
+		mm.set_instance_transform(i, xforms[i])
+		if mm.use_colors:
+			mm.set_instance_color(i, colors[i])
+	var mi := MultiMeshInstance3D.new()
+	mi.name = node_name
+	mi.multimesh = mm
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+	band_counts[node_name] = xforms.size()
+	band_origins[node_name] = xforms.map(func(x: Transform3D) -> Vector3: return x.origin)
+
+
+## Markers 8-11 m from the centreline (just outside the walls), no collision:
+## pennant posts every 6-10 m, red/white boards on the outside of corners
+## tighter than R45, torches in town, the canyon and around start/finish.
+## All MultiMesh - four draw calls for the whole band.
+func _build_roadside_band() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9107
+	var posts := []
+	var flags := []
+	var flag_cols := []
+	var boards := []
+	var board_cols := []
+	var flames := []
+	var t_end := town_end()
+	var s := 6.0
+	var side := 1.0
+	var board_i := 0
+	while s < track.length - 4.0:
+		var near_gate := absf(s - track.start_offset) < 9.0 or absf(s - track.finish_offset) < 9.0
+		var t := track.tangent_at(s)
+		var turn := signf(track.tangent_at(s - 3.0).cross(track.tangent_at(s + 3.0)).y)   # +1 left
+		var r := track.radius_at(s)
+		if not near_gate and r < 45.0:
+			# corner: boards on the outside (left turn -> right side)
+			var out_side := -turn
+			var pos := track.position_at(s) + track.right_at(s) * out_side * 8.6
+			pos.y = maxf(terrain_height(pos.x, pos.z), track.position_at(s).y) - 0.05
+			var face := Basis.looking_at(-track.right_at(s) * out_side, Vector3.UP)   # board faces the road
+			boards.append(Transform3D(face, pos + Vector3.UP * 0.75))
+			board_cols.append(Color(0.88, 0.14, 0.1) if board_i % 2 == 0 else Color(0.96, 0.95, 0.9))
+			board_i += 1
+			s += 5.0
+			continue
+		if not near_gate:
+			var lateral := side * rng.randf_range(8.4, 10.8)
+			var pos := track.position_at(s) + track.right_at(s) * lateral
+			pos.y = maxf(terrain_height(pos.x, pos.z), track.position_at(s).y - 1.5) - 0.05
+			var torch := s < t_end or canyon_weight(s) > 0.3 or absf(s - track.finish_offset) < 70.0 \
+					or absf(s - track.start_offset) < 50.0
+			var h := 1.9 if torch else 1.6
+			posts.append(Transform3D(Basis.IDENTITY.scaled(Vector3(1.0, h / 1.6, 1.0)), pos + Vector3.UP * h * 0.5))
+			if torch:
+				flames.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0.0, PI)), pos + Vector3.UP * (h + 0.16)))
+			else:
+				# pennant hangs off the road side of the post, along the travel direction
+				var fb := Basis.looking_at(t, Vector3.UP)
+				flags.append(Transform3D(fb, pos + Vector3.UP * (h - 0.22) + t * 0.3))
+				flag_cols.append(BAND_FLAG_COLORS[rng.randi_range(0, BAND_FLAG_COLORS.size() - 1)])
+		side = -side
+		s += rng.randf_range(6.0, 10.0) * 0.5   # alternating sides -> 6-10 m per side
+	var vc := func(tint: Color, emit: float) -> StandardMaterial3D:
+		var m := StandardMaterial3D.new()
+		m.vertex_color_use_as_albedo = true
+		m.albedo_color = tint
+		m.roughness = 0.8
+		if emit > 0.0:
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		return m
+	var post_mesh := CylinderMesh.new()
+	post_mesh.top_radius = 0.06; post_mesh.bottom_radius = 0.08; post_mesh.height = 1.6
+	post_mesh.radial_segments = 6; post_mesh.rings = 1
+	var pm := _flat_material(Color(0.36, 0.25, 0.16))
+	_band_mm("BandPosts", post_mesh, pm, posts, [])
+	var flag_mesh := BoxMesh.new()
+	flag_mesh.size = Vector3(0.03, 0.34, 0.6)
+	_band_mm("BandFlags", flag_mesh, vc.call(Color.WHITE, 0.0), flags, flag_cols)
+	var board_mesh := BoxMesh.new()
+	board_mesh.size = Vector3(1.5, 0.9, 0.08)
+	_band_mm("BandBoards", board_mesh, vc.call(Color.WHITE, 0.0), boards, board_cols)
+	var flame_mesh := SphereMesh.new()
+	flame_mesh.radius = 0.16; flame_mesh.height = 0.42
+	flame_mesh.radial_segments = 6; flame_mesh.rings = 3
+	var fm := StandardMaterial3D.new()
+	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fm.albedo_color = Color(1.0, 0.62, 0.18)
+	_band_mm("BandTorches", flame_mesh, fm, flames, [])
 
 
 func _place_town_arches(grape: Dictionary, cloud: Dictionary) -> void:

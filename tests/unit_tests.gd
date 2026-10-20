@@ -1000,6 +1000,44 @@ func t_s2_drift_visual_yaw() -> Dictionary:
 	return out
 
 
+## W5: engine loops get a per-kart pitch spread (player 1.0, AIs 0.95-1.05).
+func t_s3_engine_audio() -> Dictionary:
+	await _until_racing()
+	var au := race.get_node("RaceAudio") as RaceAudio
+	await _frames(2)
+	var muls := []
+	var ok := au.engine_pitch_mul.size() == rm.karts.size()
+	for k in rm.karts:
+		var m: float = au.engine_pitch_mul.get(k, -1.0)
+		muls.append(snappedf(m, 0.001))
+		if k.is_player:
+			ok = ok and m == 1.0
+		else:
+			ok = ok and m >= 0.95 and m <= 1.05
+	var distinct := {}
+	for m in muls:
+		distinct[m] = true
+	return {"pitch_mul": muls, "distinct": distinct.size(), "pass": ok and distinct.size() >= 4}
+
+
+## T7: roadside band - posts/flags/boards/torches 8-11 m from the centreline.
+func t_s4_roadside_band() -> Dictionary:
+	await _frames(1)
+	var tb: TrackBuilder = rm.track_builder
+	var out := {"counts": tb.band_counts.duplicate()}
+	var lo := 99.0
+	var hi := 0.0
+	var gaps := []
+	for layer in ["BandPosts", "BandBoards"]:
+		for o: Vector3 in tb.band_origins.get(layer, []):
+			var d: float = tb.nearest_track(o.x, o.z, 2)["dist"]
+			lo = minf(lo, d); hi = maxf(hi, d)
+	out["dist_range_m"] = [snappedf(lo, 0.1), snappedf(hi, 0.1)]
+	out["pass"] = tb.band_counts.get("BandPosts", 0) > 300 and tb.band_counts.get("BandBoards", 0) > 40 \
+			and tb.band_counts.get("BandTorches", 0) > 20 and tb.band_counts.get("BandFlags", 0) > 100 and lo > 7.4 and hi < 11.5
+	return out
+
+
 ## V1: dust, tiered drift sparks, boost flame trail, landing dust, skid marks.
 func t_t_trail_fx() -> Dictionary:
 	await _until_racing()

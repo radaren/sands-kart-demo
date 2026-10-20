@@ -322,6 +322,37 @@
     },
     {
       "detail": {
+        "distinct": 6,
+        "pitch_mul": [
+          1.0,
+          0.97,
+          1.049,
+          0.978,
+          0.963,
+          1.017
+        ]
+      },
+      "pass": true,
+      "test": "t_s3_engine_audio"
+    },
+    {
+      "detail": {
+        "counts": {
+          "BandBoards": 156,
+          "BandFlags": 438,
+          "BandPosts": 677,
+          "BandTorches": 239
+        },
+        "dist_range_m": [
+          8.4,
+          10.8
+        ]
+      },
+      "pass": true,
+      "test": "t_s4_roadside_band"
+    },
+    {
+      "detail": {
         "air_pitch_up_down_deg": [
           3.1,
           -10.0
@@ -341,8 +372,8 @@
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 157,
-        "skid_segments": 221,
+        "skid_quads": 160,
+        "skid_segments": 224,
         "sparks": 16
       },
       "pass": true,
@@ -388,9 +419,9 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 4.27,
+        "attack_hold_s": 3.86,
         "lightning_used_in_8s_from_rank": false,
-        "missile_fired_after_s": 8.75,
+        "missile_fired_after_s": -1.0,
         "rank_at_give": 2,
         "slots_filled_first": false
       },
