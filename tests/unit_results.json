@@ -321,6 +321,23 @@
       },
       "pass": true,
       "test": "t_t_trail_fx"
+    },
+    {
+      "detail": {
+        "cue": "小喷就绪! 按 ↑/W",
+        "lap_label": "圈数 1/1",
+        "meter_after_1_of_2s": 0.5,
+        "meter_idle": 0.0,
+        "meter_kind": "nitro",
+        "next_shown": "A low",
+        "overtake_tip": "超越 绿洲!",
+        "queued": 2,
+        "rank_changes": 1,
+        "shown_after_3_pushes": "C bad",
+        "tip_kept": "A low"
+      },
+      "pass": true,
+      "test": "t_u_hud_flow"
     }
   ]
 }

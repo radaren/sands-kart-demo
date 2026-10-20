@@ -991,3 +991,57 @@ func t_t_trail_fx() -> Dictionary:
 	p.controller = ctrl
 	out["pass"] = dust_straight >= 5 and fx.stats["sparks"] >= 5 and fx.stats["flames"] >= 5 and fx.stats["landing_dust"] >= 1 and skids >= 5
 	return out
+
+
+## H1 H4 H5: tips queue by priority, timing cues have their own label, rank
+## change animates + "超越 X", lap label, boost meter = boost time left.
+func t_u_hud_flow() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var hud := get_tree().root.find_children("*", "HudController", true, false)
+	var h: HudController = hud[0] if not hud.is_empty() else null
+	var out := {}
+	if h == null:
+		return {"pass": false, "error": "no hud"}
+	var p := rm.player
+	h.push_tip("A low", Color.WHITE, 0, 1.0)
+	h.push_tip("B low", Color.WHITE, 0, 1.0)
+	h.push_tip("C bad", Color.RED, 2, 1.0)
+	out["shown_after_3_pushes"] = h.tip_label.text
+	out["queued"] = h.tip_queue_size()
+	await _wait(1.1)
+	out["next_shown"] = h.tip_label.text
+	# timing cue does not clobber the tip
+	p.mini_window = 0.2
+	await _frames(2)
+	out["cue"] = h.cue_label.text
+	out["tip_kept"] = h.tip_label.text
+	p.mini_window = 0.0
+	# boost meter
+	p.boosts.clear()
+	p.add_boost("nitro", 6.0, 2.0)
+	await _wait(1.0)
+	out["meter_after_1_of_2s"] = snappedf(h.boost_bar.value, 0.05)
+	out["meter_kind"] = p.boost_meter()[0]
+	p.boosts.clear()
+	await _frames(2)
+	out["meter_idle"] = h.boost_bar.value
+	# rank change: put the player just behind a kart, then just ahead of it
+	var ai := _ai(3)
+	var rc0 := h.rank_changes
+	_stage(ai, 1500.0, 20.0)
+	_stage(p, 1490.0, 20.0)
+	await _frames(10)
+	_stage(p, 1510.0, 20.0)
+	await _frames(10)
+	out["rank_changes"] = h.rank_changes - rc0
+	out["overtake_tip"] = h.tip_label.text if h.tip_label.text.begins_with("超越") else ""
+	for t in h._tips:
+		if str(t["text"]).begins_with("超越"):
+			out["overtake_tip"] = t["text"]
+	out["lap_label"] = h.lap_label.text
+	out["pass"] = out["shown_after_3_pushes"] == "C bad" and out["queued"] == 2 and out["next_shown"] == "A low" \
+			and out["cue"].begins_with("小喷") and out["tip_kept"] == "A low" and absf(out["meter_after_1_of_2s"] - 0.5) <= 0.1 \
+			and out["meter_kind"] == "nitro" and out["meter_idle"] == 0.0 and out["rank_changes"] >= 1 and out["overtake_tip"] != "" \
+			and out["lap_label"] == "圈数 1/1"
+	return out

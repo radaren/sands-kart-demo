@@ -100,6 +100,27 @@ func _ready() -> void:
 				vp.add_boost("nitro", 6.0, 1.0)
 				await _frames(20)
 				await _snap("v1_boost")
+			"hud_flow":       # H1 H4 H5: overtake pop + queued tip, cue label, boost meter
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var hp := rm.player
+				hp.controller = null
+				var other: Kart = rm.karts[3]
+				_teleport(other, 1500.0, 2.0)
+				_teleport(hp, 1492.0, -2.0)
+				other.speed = 14.0
+				hp.speed = 26.0
+				hp.add_boost("nitro", 6.0, 3.0)
+				for i in 50:
+					hp.in_throttle = 1.0
+					other.speed = 14.0
+					await _frames(1)
+					if hp.rank < other.rank and i > 8:
+						break
+				await _frames(14)
+				hp.mini_window = 0.3
+				await _frames(2)
+				await _snap(s)
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

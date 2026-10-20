@@ -96,6 +96,7 @@ var stat_launches := 0
 var start_window := 0.0
 var start_jumped := false      ## K13: tapped too early in the countdown
 var mini_tier := 0             ## K5: tier of the pending / last mini boost (1..3)
+var boost_full := {}           ## kind -> duration when it was (re)filled (H5)
 var double_elapsed := 0.0      ## K4: time since the mini-boost tap
 var stat_perfect_doubles := 0
 var stat_doubles := 0
@@ -606,11 +607,27 @@ func add_boost(kind: String, bonus: float, duration: float, kick: float = 0.35) 
 	var fresh := not boosts.has(kind)
 	var prev: Vector2 = boosts.get(kind, Vector2.ZERO)
 	boosts[kind] = Vector2(maxf(prev.x, bonus), maxf(prev.y, duration))
+	if fresh or duration > prev.y:
+		boost_full[kind] = maxf(duration, 0.01)   # H5: HUD shows time left / full
 	speed = maxf(speed, minf(speed + bonus * kick, base_top_speed() + bonus))
 	# only signal a boost that starts or gets stronger (the magnet refreshes its
 	# boost every tick; that must not spam sounds / FOV kicks)
 	if fresh or bonus > prev.x:
 		boosted.emit(self, kind)
+
+
+## H5: strongest active boost: [kind, fraction of its time left] or ["", 0].
+func boost_meter() -> Array:
+	var best := ""
+	var bonus := 0.0
+	for kind in boosts:
+		var v: Vector2 = boosts[kind]
+		if v.y > 0.0 and v.x > bonus:
+			bonus = v.x
+			best = kind
+	if best == "":
+		return ["", 0.0]
+	return [best, clampf((boosts[best] as Vector2).y / float(boost_full.get(best, 1.0)), 0.0, 1.0)]
 
 
 func add_slow(kind: String, amount: float, duration: float) -> void:

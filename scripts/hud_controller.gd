@@ -31,8 +31,17 @@ var fog: ColorRect
 var flash_rect: ColorRect
 var minimap: Minimap
 var pause_menu: Control
-var _tips: Array = []
 var _tip_time := 0.0
+## H1: announcements queue by priority instead of overwriting each other;
+## timing hints (start / mini / landing) use their own cue label under the kart.
+var _tips: Array = []          ## [{text, color, prio, time}]
+var _tip_prio := -1
+var cue_label: Label
+var _cue_time := 0.0
+var _last_rank := 0
+var _rank_names := {}          ## rank -> kart name last frame (H4 "超越 X")
+const BOOST_COLORS := {"mini": Color(0.35, 0.7, 1.0), "start": Color(0.4, 1.0, 0.45), "nitro": Color(1.0, 0.55, 0.15),
+		"landing": Color(0.55, 1.0, 1.0), "air": Color(0.85, 0.95, 1.0), "pad": Color(1.0, 0.9, 0.3), "magnet": Color(0.8, 0.45, 1.0)}
 var _center_time := 0.0
 
 
@@ -153,6 +162,12 @@ func _ready() -> void:
 	tip_label.custom_minimum_size = Vector2(800, 50)
 	tip_label.position = Vector2(-400, -40)
 	root.add_child(tip_label)
+	cue_label = _label("", 30, Color(1, 1, 1))
+	cue_label.set_anchors_preset(Control.PRESET_CENTER)
+	cue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cue_label.custom_minimum_size = Vector2(800, 44)
+	cue_label.position = Vector2(-400, 150)
+	root.add_child(cue_label)
 	wrong_label = _label("逆行!  ←  WRONG WAY", 52, Color(1.0, 0.25, 0.2))
 	wrong_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	wrong_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -284,14 +299,76 @@ func _on_countdown(v: int) -> void:
 
 func _on_announce(_k: Kart, text: String, tone: int) -> void:
 	var c := Color(0.5, 1.0, 0.6) if tone == Kart.Tone.GOOD else (Color(1.0, 0.45, 0.35) if tone == Kart.Tone.BAD else Color.WHITE)
-	tip_label.text = text
-	tip_label.add_theme_color_override("font_color", c)
-	_tip_time = 1.4
+	push_tip(text, c, 2 if tone == Kart.Tone.BAD else 1)
+
+
+## H1: higher priority shows at once (the current one goes back in the queue if
+## it still has time); equal or lower waits its turn. Duplicates are dropped.
+func push_tip(text: String, color: Color, prio := 1, time := 1.2) -> void:
+	if tip_label.text == text and _tip_time > 0.0:
+		_tip_time = maxf(_tip_time, time * 0.6)
+		return
+	for t in _tips:
+		if t["text"] == text:
+			return
+	var tip := {"text": text, "color": color, "prio": prio, "time": time}
+	if _tip_time <= 0.0 or prio > _tip_prio:
+		if _tip_time > 0.4:
+			_tips.push_front({"text": tip_label.text, "color": tip_label.get_theme_color("font_color"), "prio": _tip_prio, "time": _tip_time})
+		_show_tip(tip)
+	else:
+		_tips.append(tip)
+		_tips.sort_custom(func(a, b): return int(a["prio"]) > int(b["prio"]))
+		if _tips.size() > 4:
+			_tips.resize(4)
+
+
+func _show_tip(t: Dictionary) -> void:
+	tip_label.text = t["text"]
+	tip_label.add_theme_color_override("font_color", t["color"])
+	_tip_time = float(t["time"])
+	_tip_prio = int(t["prio"])
+	tip_label.pivot_offset = tip_label.custom_minimum_size * 0.5
+	tip_label.scale = Vector2.ONE * 1.25
+	tip_label.create_tween().tween_property(tip_label, "scale", Vector2.ONE, 0.15)
+
+
+func tip_queue_size() -> int:
+	return _tips.size()
+
+
+func _cue(text: String, color: Color, time := 0.12) -> void:
+	cue_label.text = text
+	cue_label.add_theme_color_override("font_color", color)
+	_cue_time = time
 
 
 func _on_hit(_k: Kart, kind: String) -> void:
 	var names := {"missile": "被导弹击中!", "banana": "踩到香蕉皮!", "lightning": "被闪电劈中!", "ufo": "飞碟减速!", "magnet": "被磁铁吸住!"}
 	_on_announce(_k, names.get(kind, "受到攻击!"), Kart.Tone.BAD)
+
+
+## H4: rank pops (green up / red down) and "超越 X!" when the player passes someone.
+func _update_rank(_delta: float) -> void:
+	var r := player.rank
+	if race.state == RaceManager.State.RACING and _last_rank > 0 and r != _last_rank:
+		var up := r < _last_rank
+		rank_label.pivot_offset = rank_label.size * 0.5
+		rank_label.scale = Vector2.ONE * 1.45
+		rank_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.45) if up else Color(1.0, 0.4, 0.3))
+		var tw := rank_label.create_tween()
+		tw.tween_property(rank_label, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_callback(func() -> void: rank_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3)))
+		rank_changes += 1
+		if up and _rank_names.has(r):
+			push_tip("超越 %s!" % _rank_names[r], Color(0.5, 1.0, 0.6), 0, 0.9)
+	_last_rank = r
+	_rank_names.clear()
+	for k in race.karts:
+		_rank_names[k.rank] = k.display_name
+
+
+var rank_changes := 0
 
 
 func _on_flash(c: Color) -> void:
@@ -303,14 +380,17 @@ func _process(delta: float) -> void:
 		return
 	if player != null:
 		rank_label.text = "%d/%d" % [player.rank, race.karts.size()]
-		lap_label.text = "圈数 %d/%d" % [1, race.max_laps]
+		_update_rank(delta)
+		var lap := clampi(int(player.progress / maxf(race.track.length, 1.0)) + 1, 1, race.max_laps)
+		lap_label.text = "圈数 %d/%d" % [lap, race.max_laps]
 		time_label.text = RaceManager.format_time(race.race_time if race.state != RaceManager.State.COUNTDOWN else 0.0)
 		if player.finished:
 			time_label.text = RaceManager.format_time(player.finish_time)
 		speed_label.text = "%d km/h" % int(round(player.kmh()))
-		var top := player.config.max_speed + player.config.nitro_bonus
-		boost_bar.value = clampf(absf(player.speed) / top, 0.0, 1.0)
-		boost_bar.modulate = Color(0.4, 0.8, 1.0) if player.is_boosting() else Color(1, 1, 1)
+		# H5: the bar is the boost meter - time left of the strongest boost, coloured by kind
+		var bm := player.boost_meter()
+		boost_bar.value = bm[1]
+		boost_bar.modulate = BOOST_COLORS.get(bm[0], Color(1, 1, 1, 0.35))
 		_update_slots(delta)
 		var incoming := race.item_system.incoming_missile(player) if race.item_system else INF
 		if incoming < 120.0:
@@ -329,15 +409,11 @@ func _process(delta: float) -> void:
 		var vs := get_viewport().get_visible_rect().size
 		_ink.set_shader_parameter("aspect", Vector2(vs.x / maxf(vs.y, 1.0), 1.0))
 		fog.visible = _ink_amount > 0.0
-		if player.mini_window > 0.0 and _tip_time <= 0.0:
-			tip_label.text = "小喷就绪! 按 ↑/W"
-			tip_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
-			_tip_time = 0.3
+		if player.mini_window > 0.0:
+			_cue("小喷就绪! 按 ↑/W", Color(1.0, 0.8, 0.3))
 		if player.landing_window > 0.0:
-			# the window is only 0.3 s: this hint wins over any other tip
-			tip_label.text = "落地喷! 点按 ↑/W"
-			tip_label.add_theme_color_override("font_color", Color(0.55, 1.0, 1.0))
-			_tip_time = 0.3
+			# the window is only 0.3 s: this cue wins over the mini cue
+			_cue("落地喷! 点按 ↑/W", Color(0.55, 1.0, 1.0))
 	if race.state == RaceManager.State.COUNTDOWN and race.race_clock < RaceManager.SETTLE:
 		center_label.text = ""
 	elif race.state == RaceManager.State.COUNTDOWN and player != null:
@@ -345,14 +421,18 @@ func _process(delta: float) -> void:
 		var left := race.go_clock - race.race_clock
 		var in_window := left <= player.config.super_start_early
 		center_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.35) if in_window else Color(1.0, 0.9, 0.3))
-		if in_window and _tip_time <= 0.0:
-			tip_label.text = "现在按 ↑/W!"
-			tip_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4))
-			_tip_time = 0.1
+		if in_window:
+			_cue("现在按 ↑/W!", Color(0.4, 1.0, 0.4))
 	_center_time -= delta
 	if _center_time <= 0.0 and race.state != RaceManager.State.COUNTDOWN:
 		center_label.text = ""
 	_tip_time -= delta
 	if _tip_time <= 0.0:
 		tip_label.text = ""
+		_tip_prio = -1
+		if not _tips.is_empty():
+			_show_tip(_tips.pop_front())
+	_cue_time -= delta
+	if _cue_time <= 0.0:
+		cue_label.text = ""
 	flash_rect.color.a = move_toward(flash_rect.color.a, 0.0, delta * 2.0)
