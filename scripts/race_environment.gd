@@ -34,5 +34,5 @@ func _ready() -> void:
 	sun.light_color = Color(1.0, 0.86, 0.68)
 	sun.light_energy = 1.0
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 140.0
+	sun.directional_shadow_max_distance = 80.0    # T9: was 140 m
 	add_child(sun)

@@ -62,7 +62,7 @@ func build() -> void:
 	_build_roadside_band()
 	build_ms["scenery"] = (Time.get_ticks_usec() - t2) / 1000.0
 	build_ms["total"] = (Time.get_ticks_usec() - t0) / 1000.0
-	print("TRACK BUILD ms ", build_ms)
+	print("TRACK BUILD ms ", build_ms, " shadow-off meshes ", shadow_casters_off)
 
 
 # ---------------------------------------------------------------------------
@@ -989,6 +989,17 @@ func _manifest_scene(key: String, grape: Dictionary, cloud: Dictionary) -> Packe
 	return entry["scene"] as PackedScene
 
 
+var shadow_casters_off := 0   ## T9: prop meshes with shadows disabled (backdrop / far roadside)
+
+
+## T9: props further than 22 m from the road never get a visible shadow inside
+## the 80 m shadow range at race speed - stop them casting.
+func _no_shadows(node: Node3D) -> void:
+	for g in node.find_children("*", "GeometryInstance3D", true, false):
+		(g as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		shadow_casters_off += 1
+
+
 func _spawn_prop(packed: PackedScene, pos: Vector3, rng: RandomNumberGenerator, lo: float, hi: float) -> Node3D:
 	var inst := packed.instantiate()
 	if not (inst is Node3D):
@@ -999,6 +1010,8 @@ func _spawn_prop(packed: PackedScene, pos: Vector3, rng: RandomNumberGenerator, 
 	node.rotation.y = rng.randf_range(-PI, PI)
 	node.scale = Vector3.ONE * rng.randf_range(lo, hi)
 	add_child(node)
+	if float(nearest_track(pos.x, pos.z, 3)["dist"]) > 22.0:
+		_no_shadows(node)
 	return node
 
 
