@@ -12,6 +12,12 @@ extends Resource
 
 
 func weights_for(rank: int, total: int) -> Dictionary:
+	if rank == 1:
+		# I3: the leader has nobody ahead to hit
+		var w := front_weights.duplicate()
+		for useless in [ItemDefs.MISSILE, ItemDefs.MAGNET, ItemDefs.UFO, ItemDefs.LIGHTNING]:
+			w[useless] = 0
+		return w
 	if rank <= 2:
 		return front_weights.duplicate()
 	if rank <= 4 and total > 4:

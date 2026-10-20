@@ -42,14 +42,14 @@
     {
       "detail": {
         "nitro_active": false,
-        "picked": "cloud",
-        "progress_at_pickup": 298.1,
+        "picked": "banana",
+        "progress_at_pickup": 298.5,
         "shield": false,
         "used_log": [
           {
-            "item": "cloud",
+            "item": "banana",
             "kart": "Player",
-            "time": 6.98333333333344
+            "time": 7.00000000000011
           }
         ]
       },
@@ -61,8 +61,8 @@
         "after": [
           "Player",
           "AI_2",
-          "AI_3",
           "AI_1",
+          "AI_3",
           "AI_4",
           "AI_5"
         ],
@@ -102,23 +102,23 @@
         "boost_kinds": {
           "air": 1,
           "landing": 1,
-          "mini": 10,
+          "mini": 8,
           "pad": 4,
           "start": 1
         },
-        "items_used_total": 30,
-        "player_finish": "1:39.35",
-        "player_hits": 1,
+        "items_used_total": 16,
+        "player_finish": "1:38.47",
+        "player_hits": 3,
         "race_finished": true,
         "results": [
-          "1 阿蓝 1:36.32",
-          "2 橘子 1:38.35",
-          "3 小黄 1:39.15",
-          "4 绿洲 1:39.27",
-          "5 你 1:39.35",
-          "6 紫电 1:40.87"
+          "1 小黄 1:36.45",
+          "2 绿洲 1:37.78",
+          "3 你 1:38.47",
+          "4 橘子 1:38.58",
+          "5 阿蓝 1:39.02",
+          "6 紫电 1:39.37"
         ],
-        "sim_seconds": 100.9
+        "sim_seconds": 99.4
       },
       "pass": true,
       "test": "race_finished_and_results"

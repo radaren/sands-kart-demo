@@ -21,6 +21,9 @@ const LAYER_WORLD := 1
 const LAYER_KART := 2
 const LAYER_WALL := 8
 const MAX_ITEMS := 2
+## K12: share of the entry speed a hit leaves you with (instead of stopping dead).
+const HIT_RETAIN := {"banana": 0.45, "lightning": 0.55, "missile": 0.15}
+const HIT_RETAIN_DEFAULT := 0.35
 
 @export var config: KartConfig
 
@@ -81,6 +84,8 @@ var slows := {}             ## kind -> Vector2(amount, remaining)
 var stun_time := 0.0
 var stun_total := 0.0
 var stun_kind := ""
+var stun_floor := 0.0          ## speed a stun decelerates to (K12)
+var invuln_time := 0.0         ## post-hit invulnerability (K12)
 var shield_time := 0.0
 var cloud_time := 0.0
 var items: Array[int] = []
@@ -129,11 +134,12 @@ func boost_bonus() -> float:
 	return bonus
 
 
+## I4: slowdowns take the strongest one (like boosts), they don't add up.
 func slow_amount() -> float:
-	var total := 0.0
+	var worst := 0.0
 	for v: Vector2 in slows.values():
-		total += v.x
-	return total
+		worst = maxf(worst, v.x)
+	return worst
 
 
 func is_boosting() -> bool:
@@ -208,7 +214,12 @@ func _tick_effects(delta: float) -> void:
 			slows.erase(key)
 		else:
 			slows[key] = v
-	stun_time = maxf(0.0, stun_time - delta)
+	if stun_time > 0.0:
+		stun_time = maxf(0.0, stun_time - delta)
+		if stun_time <= 0.0:
+			invuln_time = config.hit_invuln_time
+	else:
+		invuln_time = maxf(0.0, invuln_time - delta)
 	freeze_time = maxf(0.0, freeze_time - delta)
 	shield_time = maxf(0.0, shield_time - delta)
 	cloud_time = maxf(0.0, cloud_time - delta)
@@ -302,7 +313,7 @@ func _update_speed(delta: float, throttle: float) -> void:
 		speed = 0.0
 		return
 	if stun_time > 0.0:
-		speed = move_toward(speed, 0.0, config.stun_decel * delta)
+		speed = move_toward(speed, stun_floor, config.stun_decel * delta)
 		return
 	var bonus := boost_bonus()
 	var top := maxf(5.0, base_top_speed() + bonus - slow_amount())
@@ -451,6 +462,8 @@ func add_slow(kind: String, amount: float, duration: float) -> void:
 
 ## Returns false when a shield absorbed the hit.
 func hit(kind: String, stun: float, blockable: bool, slow_amt: float = 0.0, slow_dur: float = 0.0) -> bool:
+	if invuln_time > 0.0 or (stun_time > 0.0 and stun > 0.0):
+		return false    # K12: no chain hits while spinning / just recovered
 	if blockable and shield_time > 0.0:
 		shield_time = 0.0
 		announced.emit(self, "护盾抵挡!", Tone.GOOD)
@@ -460,6 +473,7 @@ func hit(kind: String, stun: float, blockable: bool, slow_amt: float = 0.0, slow
 		stun_time = maxf(stun_time, stun)
 		stun_total = stun_time
 		stun_kind = kind
+		stun_floor = maxf(0.0, speed) * float(HIT_RETAIN.get(kind, HIT_RETAIN_DEFAULT))
 		boosts.clear()
 		mini_window = 0.0
 		double_window = 0.0

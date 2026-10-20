@@ -596,12 +596,22 @@ void fragment() {
 """
 
 
+const ITEM_ROW_A := [-4.0, 0.0, 4.0]   ## lateral metres (for a 12 m road)
+const ITEM_ROW_B := [-2.0, 2.0]
+const ITEM_TRIGGER_RADIUS := 0.8
+
+
 func _build_item_rows() -> void:
 	var mat := _shader_material(ITEM_BOX_SHADER)
 	var half := track.road_width * 0.5
+	var row_i := -1
 	for s in track.item_rows:
-		for slot in 5:
-			var lateral := (slot - 2) * (half * 0.4)
+		row_i += 1
+		# I1: not a wall of boxes any more — 3 / 2 boxes, staggered row to row,
+		# small triggers, so some lines miss and picking boxes is a choice.
+		var laterals: Array = ITEM_ROW_A if row_i % 2 == 0 else ITEM_ROW_B
+		for slot in laterals.size():
+			var lateral: float = laterals[slot] * half / 6.0
 			var base := track.position_at(s) + track.right_at(s) * lateral
 			var holder := Node3D.new()
 			holder.name = "ItemBox"
@@ -635,7 +645,7 @@ func _build_item_rows() -> void:
 			area.monitorable = false
 			var cs := CollisionShape3D.new()
 			var sphere := SphereShape3D.new()
-			sphere.radius = 1.25
+			sphere.radius = ITEM_TRIGGER_RADIUS
 			cs.shape = sphere
 			area.add_child(cs)
 			holder.add_child(area)
@@ -649,6 +659,8 @@ func _on_item_box_body(body: Node3D, holder: Node3D) -> void:
 		return
 	if not body.has_method("receive_item_box"):
 		return
+	if body is Kart and (body as Kart).items.size() >= Kart.MAX_ITEMS:
+		return   # I2: full slots leave the box for someone else
 	holder.set_meta("active", false)
 	(holder.get_node("Mesh") as Node3D).visible = false
 	(holder.get_node("Mark") as Node3D).visible = false

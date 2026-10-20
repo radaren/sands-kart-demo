@@ -57,6 +57,50 @@
       },
       "pass": true,
       "test": "t_d_feedback_wired"
+    },
+    {
+      "detail": {
+        "entry_speed": 24.1,
+        "hit_after_invuln_landed": true,
+        "hit_during_invuln_landed": false,
+        "invuln_left": 1.2,
+        "lowest_speed_in_stun": 10.8,
+        "retained_ratio": 0.45
+      },
+      "pass": true,
+      "test": "t_e_hit_retains_speed_and_invuln"
+    },
+    {
+      "detail": {
+        "slow_amount_with_8_9_3": 9.0
+      },
+      "pass": true,
+      "test": "t_f_slows_use_max"
+    },
+    {
+      "detail": {
+        "boxes": 18,
+        "reach_m": 1.3,
+        "worst_row_coverage": 0.72
+      },
+      "pass": true,
+      "test": "t_g_item_boxes_not_guaranteed"
+    },
+    {
+      "detail": {
+        "consumed_with_free_slot": true,
+        "full_slots_box_still_active": true
+      },
+      "pass": true,
+      "test": "t_h_full_slots_keep_box"
+    },
+    {
+      "detail": {
+        "rank1_missile_or_magnet_of_5000": 0,
+        "rank2_missile_or_magnet_of_5000": 514
+      },
+      "pass": true,
+      "test": "t_i_rank1_no_missile_magnet"
     }
   ]
 }

@@ -180,7 +180,8 @@ func _process(delta: float) -> void:
 	var target := Basis(right, up, -f2).orthonormalized()
 	var xf := kart.get_global_transform_interpolated()
 	global_transform = Transform3D(global_basis.orthonormalized().slerp(target, 1.0 - exp(-12.0 * delta)), xf.origin)
-	visible = kart.freeze_time <= 0.0 or int(_t * 10.0) % 2 == 0
+	var blink := kart.freeze_time > 0.0 or kart.invuln_time > 0.0
+	visible = not blink or int(_t * (10.0 if kart.freeze_time > 0.0 else 16.0)) % 2 == 0
 	var dstate := 0
 	if kart.drifting:
 		dstate = 2 if kart.drift_charged() else 1

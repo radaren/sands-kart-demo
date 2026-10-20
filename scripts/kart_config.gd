@@ -11,6 +11,7 @@ extends Resource
 @export var overspeed_drag := 8.0
 @export var reverse_speed := 9.0
 @export var stun_decel := 42.0
+@export var hit_invuln_time := 1.2   ## invulnerable after a hit wears off (K12)
 @export var wall_speed_loss := 0.55
 
 @export_group("Handling")

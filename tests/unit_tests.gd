@@ -178,3 +178,110 @@ func t_d_feedback_wired() -> Dictionary:
 	return {"pass": all_wired and trauma >= 0.19 and wall_sfx and kick >= 3.9 and mini_sfx and count[0] == 1 and sounds >= 10,
 			"connections": conns, "trauma_after_wall_hit_0.8": snappedf(trauma, 0.01), "fov_kick_after_mini": snappedf(kick, 0.01),
 			"magnet_boosted_signals_over_30_ticks": count[0], "sfx_loaded": sounds}
+
+
+## K12: a banana hit leaves ~45% of the entry speed (not a dead stop), and the
+## kart is invulnerable for 1.2 s after recovering.
+func t_e_hit_retains_speed_and_invuln() -> Dictionary:
+	await _until_racing()
+	var k := _ai(3)
+	while k.speed < 24.0:
+		await _frames(1)
+	k.shield_time = 0.0
+	k.invuln_time = 0.0
+	var entry := k.speed
+	var ok_hit := k.hit("banana", 0.9, true)
+	var low := entry
+	while k.stun_time > 0.0:
+		low = minf(low, k.speed)
+		await _frames(1)
+	var retained := low / entry
+	var second := k.hit("missile", 1.4, true)      # right after recovery: blocked
+	var inv := k.invuln_time
+	await _wait(1.3)
+	k.shield_time = 0.0
+	var third := k.hit("banana", 0.01, true)        # after invuln: lands again
+	return {"pass": ok_hit and absf(retained - 0.45) < 0.06 and not second and inv > 1.0 and third,
+			"entry_speed": snappedf(entry, 0.1), "lowest_speed_in_stun": snappedf(low, 0.1), "retained_ratio": snappedf(retained, 0.01),
+			"hit_during_invuln_landed": second, "invuln_left": snappedf(inv, 0.01), "hit_after_invuln_landed": third}
+
+
+## I4: slowdowns take the max instead of adding up.
+func t_f_slows_use_max() -> Dictionary:
+	var k := _ai(4)
+	k.slows.clear()
+	k.add_slow("lightning", 8.0, 3.0)
+	k.add_slow("ufo", 9.0, 4.0)
+	k.add_slow("magnet", 3.0, 1.0)
+	var amt := k.slow_amount()
+	k.slows.clear()
+	return {"pass": is_equal_approx(amt, 9.0), "slow_amount_with_8_9_3": amt}
+
+
+## I1: item box rows no longer cover the whole road. Coverage = trigger radius
+## + kart half-width around each box; every row must leave a gap a kart fits in.
+func t_g_item_boxes_not_guaranteed() -> Dictionary:
+	var tb: TrackBuilder = race.get_node("SandsTrack")
+	var reach := TrackBuilder.ITEM_TRIGGER_RADIUS + _kart_half_width()
+	var worst := 0.0
+	for laterals in [TrackBuilder.ITEM_ROW_A, TrackBuilder.ITEM_ROW_B]:
+		var covered := 0
+		var n := 0
+		var x := -5.4
+		while x <= 5.4:
+			n += 1
+			for b in laterals:
+				if absf(x - b) <= reach:
+					covered += 1
+					break
+			x += 0.05
+		worst = maxf(worst, float(covered) / n)
+	return {"pass": worst < 0.8 and TrackBuilder.ITEM_TRIGGER_RADIUS <= 0.8, "worst_row_coverage": snappedf(worst, 0.01),
+			"reach_m": snappedf(reach, 0.01), "boxes": tb.item_box_nodes.size()}
+
+
+func _kart_half_width() -> float:
+	var cs: CollisionShape3D = rm.player.get_node("CollisionShape3D")
+	if cs.shape is BoxShape3D:
+		return (cs.shape as BoxShape3D).size.x * 0.5
+	if cs.shape is CapsuleShape3D:
+		return (cs.shape as CapsuleShape3D).radius
+	return 0.8
+
+
+## I2: a kart with full slots passes through a box without consuming it.
+func t_h_full_slots_keep_box() -> Dictionary:
+	var tb: TrackBuilder = race.get_node("SandsTrack")
+	var k := _ai(5)
+	var holder: Node3D = null
+	for h in tb.item_box_nodes:
+		if h.get_meta("active", false):
+			holder = h
+			break
+	var saved := k.items.duplicate()
+	k.items.assign([ItemDefs.NITRO, ItemDefs.BANANA])
+	tb._on_item_box_body(k, holder)
+	var still_active: bool = holder.get_meta("active", false)
+	k.items.clear()
+	tb._on_item_box_body(k, holder)
+	var consumed_when_room: bool = not holder.get_meta("active", true)
+	k.items.assign(saved)
+	return {"pass": still_active and consumed_when_room, "full_slots_box_still_active": still_active,
+			"consumed_with_free_slot": consumed_when_room}
+
+
+## I3: the leader never rolls a missile / magnet (nobody ahead to hit).
+func t_i_rank1_no_missile_magnet() -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	var table: ItemTable = RaceManager.ITEM_TABLE
+	var bad := 0
+	var rank2_attack := 0
+	for i in 5000:
+		var it := table.roll(1, 6, 0.0, rng)
+		if it == ItemDefs.MISSILE or it == ItemDefs.MAGNET:
+			bad += 1
+		var it2 := table.roll(2, 6, 10.0, rng)
+		if it2 == ItemDefs.MISSILE or it2 == ItemDefs.MAGNET:
+			rank2_attack += 1
+	return {"pass": bad == 0 and rank2_attack > 0, "rank1_missile_or_magnet_of_5000": bad, "rank2_missile_or_magnet_of_5000": rank2_attack}
