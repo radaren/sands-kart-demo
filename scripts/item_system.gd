@@ -16,6 +16,8 @@ const SCENES := {
 
 signal item_used(kart: Kart, item: int)
 signal screen_flash(color: Color)
+signal exploded(pos: Vector3)
+signal ufo_arrived(target: Kart)
 
 var race: RaceManager
 var used_log: Array = []      ## [{kart, item, time}] for tests / debugging
@@ -35,6 +37,7 @@ func use_item(kart: Kart, item: int) -> void:
 	var fx := SCENES[item].instantiate() as ItemEffect
 	fx.setup(self, kart, target)
 	add_child(fx)
+	fx.reset_physics_interpolation()   # spawned at the kart, not lerped in from the origin
 	used_log.append({"kart": String(kart.name), "item": ItemDefs.KEYS[item], "time": race.race_time})
 	item_used.emit(kart, item)
 	if kart.is_player:
@@ -48,16 +51,23 @@ func is_threatened(kart: Kart) -> bool:
 	return false
 
 
+## Nearest homing missile locked on `kart` (metres), INF if none (H3 lock-on warning).
+func incoming_missile(kart: Kart) -> float:
+	var best := INF
+	for c in get_children():
+		if c is ItemEffect and c.has_method("distance_to_target") and (c as ItemEffect).target == kart:
+			best = minf(best, c.distance_to_target())
+	return best
+
+
 func spawn_burst(pos: Vector3, color: Color) -> void:
-	var mi := MeshInstance3D.new()
-	var s := SphereMesh.new(); s.radius = 1.0; s.height = 2.0
-	mi.mesh = s
-	mi.material_override = ItemEffect.emissive(color, 4.0, 0.8)
-	add_child(mi)
-	mi.global_position = pos
-	var tw := create_tween()
-	tw.tween_property(mi, "scale", Vector3.ONE * 3.0, 0.35)
-	tw.tween_callback(mi.queue_free)
+	FxLib.flash_sphere(self, pos, color, 1.0, 0.35, 3.0)
+	FxLib.burst(self, pos, color, 20, 8.0, 0.5, 0.4)
+
+
+## Compile item shaders while the countdown runs (no hitch on the first use).
+func prewarm(at: Vector3) -> void:
+	FxLib.prewarm(self, at)
 
 
 func flash(color: Color) -> void:

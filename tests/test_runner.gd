@@ -101,6 +101,7 @@ func _run() -> void:
 	var ai := AIDriver.new()
 	ai.kart = player
 	ai.manual_items = true
+	ai.aggression = 1.0      # the check needs a pickup: always go for boxes
 	ai.name = "AutoPilot"
 	player.add_child(ai)
 	var human: Node = player.controller

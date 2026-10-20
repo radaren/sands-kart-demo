@@ -122,12 +122,15 @@ func build(color: Color, driver_name: String) -> void:
 		s.visible = false
 		sparks.append(s)
 	# shield bubble
-	var sb := SphereMesh.new(); sb.radius = 1.6; sb.height = 3.0
-	var sm := mat(Color(0.4, 0.85, 1.0, 0.28), 1.5)
-	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	sm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	shield_bubble = _add(sb, sm, Vector3(0, 0.8, 0))
+	# shield bubble: fresnel shader (bright rim, clear centre) instead of a milky ball (I8)
+	var sb := SphereMesh.new(); sb.radius = 1.6; sb.height = 3.0; sb.radial_segments = 24; sb.rings = 12
+	_shield_mat = FxLib.shield_mat().duplicate() as ShaderMaterial
+	shield_bubble = MeshInstance3D.new()
+	shield_bubble.mesh = sb
+	shield_bubble.material_override = _shield_mat
+	shield_bubble.position = Vector3(0, 0.8, 0)
+	shield_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(shield_bubble)    # not under the model: it must not tumble with the kart
 	shield_bubble.visible = false
 	# name tag
 	var tag := Label3D.new()
@@ -146,10 +149,13 @@ func build(color: Color, driver_name: String) -> void:
 var kart: Kart
 var name_tag: Label3D
 var land_ring: MeshInstance3D
+var _shield_mat: ShaderMaterial
+var _shield_break_t := -1.0
+var _shield_on_t := 0.0
+var _was_shield := false
 var _ring_mat: StandardMaterial3D
 var _ring_t := -1.0
 var _t := 0.0
-var _spin := 0.0
 
 
 func _ready() -> void:
@@ -174,6 +180,7 @@ func _ready() -> void:
 	add_child(land_ring)
 	if kart:
 		kart.landing_window_opened.connect(func(_k: Kart) -> void: _ring_t = 0.0)
+		kart.shield_blocked.connect(_on_shield_blocked)
 	# Driven every rendered frame from the kart's interpolated transform (C1),
 	# so it is top-level and opts out of physics interpolation itself.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -191,12 +198,9 @@ func _process(delta: float) -> void:
 	var yaw_off := 0.0
 	if kart.drifting:
 		yaw_off = float(kart.drift_dir) * -deg_to_rad(16.0)
-	if kart.stun_time > 0.0:
-		_spin += 13.0 * delta
-	else:
-		_spin = move_toward(_spin, roundf(_spin / TAU) * TAU, 10.0 * delta)
+	_hit_reaction(delta)
 	var up := kart.ground_normal.normalized() if kart.grounded else Vector3.UP
-	var yaw := kart.facing_yaw + yaw_off + _spin
+	var yaw := kart.facing_yaw + yaw_off
 	var fwd := Vector3(-sin(yaw), 0.0, -cos(yaw))
 	var right := fwd.cross(up).normalized()
 	var f2 := up.cross(right).normalized()
@@ -223,6 +227,48 @@ func _process(delta: float) -> void:
 	update_fx(kart.is_boosting(), dstate, kart.shield_time > 0.0, kart.speed * delta / 0.3, _t)
 
 
+## I-presentation: hit reactions instead of a generic spin / dead stop.
+##   missile  -> tumble: a full forward flip with a hop
+##   banana   -> spin-out: two yaw turns easing out
+##   lightning-> squash flat, then pop back (with a buzz jitter)
+##   other    -> one quick spin
+var react_kind := ""
+var react_progress := 0.0
+
+
+func _hit_reaction(_delta: float) -> void:
+	var pitch := 0.0
+	var yaw := 0.0
+	var hop := 0.0
+	var sq := 1.0
+	react_kind = ""
+	if kart.stun_time > 0.0 and kart.stun_total > 0.0:
+		var t := clampf(1.0 - kart.stun_time / kart.stun_total, 0.0, 1.0)
+		var e := 1.0 - pow(1.0 - t, 2.2)
+		react_kind = kart.stun_kind
+		react_progress = t
+		match kart.stun_kind:
+			"missile":
+				pitch = -TAU * clampf(t / 0.75, 0.0, 1.0) ** 0.8
+				hop = sin(clampf(t / 0.75, 0.0, 1.0) * PI) * 1.8
+			"banana":
+				yaw = TAU * 2.0 * e
+			"lightning":
+				sq = lerpf(0.45, 1.0, clampf((t - 0.5) / 0.5, 0.0, 1.0))
+				yaw = sin(_t * 80.0) * 0.06 * (1.0 - t)
+			_:
+				yaw = TAU * e
+	model.position = Vector3(0, hop, 0)
+	model.rotation = Vector3(pitch, yaw, 0)
+	model.scale = Vector3(1.0 / sqrt(sq), sq, 1.0 / sqrt(sq))
+
+
+func _on_shield_blocked(_k: Kart, _kind: String) -> void:
+	_shield_break_t = 0.0
+	FxLib.burst(get_parent().get_parent(), global_position + Vector3.UP * 0.8, Color(0.5, 0.95, 1.0), 36, 9.0, 0.6, 0.35, -9.0)
+	FxLib.flash_sphere(get_parent().get_parent(), global_position + Vector3.UP * 0.8, Color(0.5, 0.95, 1.0), 1.6, 0.25, 1.6)
+
+
 func update_fx(boosting: bool, drift_state: int, shield: bool, wheel_spin: float, t: float) -> void:
 	for f in flames:
 		f.visible = boosting
@@ -243,6 +289,23 @@ func update_fx(boosting: bool, drift_state: int, shield: bool, wheel_spin: float
 	else:
 		_spark_mat.albedo_color = Color(0.4, 0.8, 1.0)
 		_spark_mat.emission = Color(0.4, 0.8, 1.0)
-	shield_bubble.visible = shield
+	# shield: pops in, shimmers, and bursts (scale up + fade) when it blocks
+	if shield and not _was_shield:
+		_shield_on_t = 0.0
+	_was_shield = shield
+	_shield_on_t += get_process_delta_time()
+	if _shield_break_t >= 0.0:
+		_shield_break_t += get_process_delta_time()
+		var k := _shield_break_t / 0.25
+		shield_bubble.visible = k < 1.0
+		shield_bubble.scale = Vector3.ONE * (1.0 + 0.6 * k)
+		_shield_mat.set_shader_parameter("strength", 2.0 * (1.0 - k))
+		if k >= 1.0:
+			_shield_break_t = -1.0
+	else:
+		shield_bubble.visible = shield
+		var pop := clampf(_shield_on_t / 0.2, 0.0, 1.0)
+		shield_bubble.scale = Vector3.ONE * (0.3 + 0.7 * pop + 0.08 * sin(pop * PI))
+		_shield_mat.set_shader_parameter("strength", 1.0 + 0.15 * sin(t * 6.0))
 	for w in wheels:
 		w.rotation.x -= wheel_spin

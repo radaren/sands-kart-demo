@@ -47,12 +47,12 @@
           "item_used": 1,
           "items_changed": 1,
           "landed": 1,
-          "shield_blocked": 1,
+          "shield_blocked": 2,
           "wall_hit": 1
         },
         "fov_kick_after_mini": 4.0,
         "magnet_boosted_signals_over_30_ticks": 1,
-        "sfx_loaded": 16,
+        "sfx_loaded": 26,
         "trauma_after_wall_hit_0.8": 0.2
       },
       "pass": true,
@@ -197,6 +197,31 @@
       },
       "pass": true,
       "test": "t_m_landing_boost"
+    },
+    {
+      "detail": {
+        "banana_peel_parts": 10,
+        "banana_spin_max_rad": 12.56,
+        "banana_use_sound": true,
+        "flash_when_player_casts": 0,
+        "flash_when_player_struck": 1,
+        "hud_icon_after_roll": true,
+        "hud_icons_loaded": 8,
+        "hud_roulette_running": true,
+        "lightning_bolts": 2,
+        "lightning_box_meshes": 0,
+        "lightning_squash": true,
+        "missile_exploded": 1,
+        "missile_lock_distance_m": 25.9,
+        "missile_trail": true,
+        "missile_tumble_max_rad": 4.8,
+        "missile_use_sound": true,
+        "new_materials_on_2nd_missile": 0,
+        "shield_break_sound": true,
+        "shield_shader": true
+      },
+      "pass": true,
+      "test": "t_n_item_presentation"
     }
   ]
 }

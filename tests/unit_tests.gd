@@ -493,3 +493,135 @@ func t_m_landing_boost() -> Dictionary:
 	return {"pass": air_ok and win_ok and fired.all(func(f): return f) and not no_tap_boost and is_equal_approx(bonus, 3.0) and dur >= 1.4 and ding,
 			"air_time_per_ramp_s": airs, "window_frames_no_tap": windows, "boost_fired_per_ramp": fired,
 			"boost_bonus_mps": bonus, "boost_time_s": snappedf(dur, 0.01), "ding_played": ding, "boost_without_tap": no_tap_boost}
+
+
+func _effects(cls_name: String) -> Array:
+	var out := []
+	for c in rm.item_system.get_children():
+		if c is ItemEffect and c.get_script().resource_path.get_file().begins_with(cls_name):
+			out.append(c)
+	return out
+
+
+func _clear_items() -> void:
+	for c in rm.item_system.get_children():
+		c.queue_free()
+	for k in rm.karts:
+		k.stun_time = 0.0; k.invuln_time = 0.0; k.shield_time = 0.0; k.cloud_time = 0.0
+		k.slows.clear(); k.boosts.clear(); k.items.clear()
+	await _frames(2)
+
+
+## I5-I9 / H3 / H1: every item has a use sound and readable effects; hits play
+## a kind-specific reaction; materials are cached (no new shader per use).
+func t_n_item_presentation() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var fb: FeedbackDirector = race.get_node("Feedback")
+	var hud: HudController = race.get_node("HUD")
+	var p := rm.player
+	var ai := _ai(1)
+	var out := {}
+	# --- missile: player -> AI ahead
+	_stage(p, 900.0, 20.0)
+	_stage(ai, 925.0, 18.0)
+	await _frames(20)
+	var exploded := [0]
+	var cb := func(_pos): exploded[0] += 1
+	rm.item_system.exploded.connect(cb)
+	rm.item_system.use_item(p, ItemDefs.MISSILE)
+	await _frames(3)
+	var ms := _effects("missile")
+	out["missile_trail"] = not ms.is_empty() and ms[0].trail_puffs > 0
+	out["missile_lock_distance_m"] = snappedf(rm.item_system.incoming_missile(ai), 0.1)
+	out["missile_use_sound"] = fb.played.has("launch")
+	var tumble := 0.0
+	for i in 120:
+		await _frames(1)
+		var kv := ai.get_node("Visual") as KartVisual
+		if kv and kv.react_kind == "missile":
+			tumble = maxf(tumble, absf(kv.model.rotation.x))
+	out["missile_exploded"] = exploded[0]
+	out["missile_tumble_max_rad"] = snappedf(tumble, 0.01)
+	rm.item_system.exploded.disconnect(cb)
+	await _clear_items()
+	var mats_after_first := FxLib._mats.size()
+	rm.item_system.use_item(p, ItemDefs.MISSILE)
+	await _frames(30)
+	out["new_materials_on_2nd_missile"] = FxLib._mats.size() - mats_after_first
+	await _clear_items()
+	# --- banana: AI drops, player drives into it
+	_stage(p, 1650.0, 18.0)
+	_stage(ai, 1662.0, 16.0)
+	var ai_ctrl := ai.controller
+	ai.controller = null
+	ai.in_throttle = 0.6
+	await _frames(10)
+	rm.item_system.use_item(ai, ItemDefs.BANANA)
+	await _frames(1)
+	var bn := _effects("banana")
+	out["banana_peel_parts"] = bn[0].peel.find_children("*", "MeshInstance3D", true, false).size() if not bn.is_empty() else 0
+	out["banana_use_sound"] = fb.played.has("toss")
+	var spin := 0.0
+	for i in 150:
+		await _frames(1)
+		var kv := p.get_node("Visual") as KartVisual
+		if kv and kv.react_kind == "banana":
+			spin = maxf(spin, absf(kv.model.rotation.y))
+	out["banana_spin_max_rad"] = snappedf(spin, 0.01)
+	await _clear_items()
+	# --- lightning: flash only when the player is struck
+	var flashes := [0]
+	var fcb := func(_c): flashes[0] += 1
+	rm.item_system.screen_flash.connect(fcb)
+	_stage(p, 2250.0, 20.0)
+	_stage(ai, 2230.0, 20.0)
+	await _frames(15)
+	rm.item_system.use_item(p, ItemDefs.LIGHTNING)     # player strikes others
+	await _frames(2)
+	var lt := _effects("lightning")
+	var boxes := 0
+	out["flash_when_player_casts"] = flashes[0]
+	await _clear_items()
+	await _frames(20)
+	rm.item_system.use_item(ai, ItemDefs.LIGHTNING)    # AI behind strikes the player
+	await _frames(2)
+	out["flash_when_player_struck"] = flashes[0]
+	lt = _effects("lightning")
+	if not lt.is_empty():
+		for b in lt[0].bolts:
+			if b.mesh is BoxMesh: boxes += 1
+	out["lightning_bolts"] = lt[0].bolts.size() if not lt.is_empty() else 0
+	out["lightning_box_meshes"] = boxes
+	out["lightning_squash"] = (p.get_node("Visual") as KartVisual).react_kind == "lightning"
+	rm.item_system.screen_flash.disconnect(fcb)
+	await _clear_items()
+	# --- shield: fresnel bubble, block shatters
+	rm.item_system.use_item(p, ItemDefs.SHIELD)
+	await _frames(15)
+	var kvp := p.get_node("Visual") as KartVisual
+	out["shield_shader"] = kvp.shield_bubble.material_override is ShaderMaterial and kvp.shield_bubble.visible
+	p.hit("missile", 1.4, true)
+	await _frames(2)
+	out["shield_break_sound"] = fb.played.back() == "shatter" or fb.played.has("shatter")
+	await _clear_items()
+	# --- HUD icons + roulette
+	p.items.clear()
+	p.items_changed.emit(p)
+	await _frames(2)
+	p.give_item(ItemDefs.BANANA)
+	await _frames(3)
+	out["hud_icons_loaded"] = hud._icons.size()
+	out["hud_roulette_running"] = hud.is_rolling()
+	await _wait(0.8)
+	out["hud_icon_after_roll"] = not p.items.is_empty() and not hud.is_rolling() and hud.slot_icons[0].texture == hud._icons.get(p.items[0])
+	p.items.clear()
+	ai.controller = ai_ctrl
+	var ok: bool = out["missile_trail"] and out["missile_lock_distance_m"] < 60.0 and out["missile_use_sound"] \
+			and out["missile_exploded"] >= 1 and out["missile_tumble_max_rad"] > 3.0 and out["new_materials_on_2nd_missile"] == 0 \
+			and out["banana_peel_parts"] >= 10 and out["banana_use_sound"] and out["banana_spin_max_rad"] > 6.0 \
+			and out["lightning_bolts"] >= 2 and out["lightning_box_meshes"] == 0 and out["flash_when_player_casts"] == 0 \
+			and out["flash_when_player_struck"] == 1 and out["lightning_squash"] and out["shield_shader"] and out["shield_break_sound"] \
+			and out["hud_icons_loaded"] == 8 and out["hud_roulette_running"] and out["hud_icon_after_roll"]
+	out["pass"] = ok
+	return out

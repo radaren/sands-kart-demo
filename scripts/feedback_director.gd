@@ -6,7 +6,12 @@ extends Node
 
 const SFX_DIR := "res://assets/audio/sfx/"
 const SFX := ["beep", "go", "boost", "mini", "wall", "pickup", "use", "explode", "hit",
-		"zap", "shield", "slip", "warn", "finish", "land", "ding"]
+		"zap", "shield", "slip", "warn", "finish", "land", "ding", "launch", "toss", "puff",
+		"magnet", "ufo", "roll", "shatter", "scrape", "bump", "thunder"]
+## I5-I9: every item has its own use sound
+const USE_SOUND := {ItemDefs.MISSILE: "launch", ItemDefs.BANANA: "toss", ItemDefs.CLOUD: "puff",
+		ItemDefs.SHIELD: "shield", ItemDefs.LIGHTNING: "thunder", ItemDefs.MAGNET: "magnet",
+		ItemDefs.UFO: "launch", ItemDefs.NITRO: "use"}
 const HIT_SOUND := {"missile": "explode", "lightning": "zap", "banana": "slip", "ufo": "zap"}
 const FOV_KICK := {"mini": 4.0, "nitro": 10.0, "start": 8.0, "pad": 8.0, "landing": 6.0, "air": 5.0}
 
@@ -20,6 +25,8 @@ var streams := {}
 var played: Array[String] = []        ## log of played effects (tests / debugging)
 var _item_counts := {}
 var _pool: Array[AudioStreamPlayer] = []
+var _items: ItemSystem
+var _lock_beep := 0.0
 
 
 func _ready() -> void:
@@ -41,7 +48,10 @@ func _ready() -> void:
 			play("finish"))
 	var items := get_node_or_null(items_path) as ItemSystem
 	if items:
+		_items = items
 		items.item_used.connect(_on_item_used)
+		items.exploded.connect(_on_exploded)
+		items.ufo_arrived.connect(func(t: Kart) -> void: play("ufo", t, -2.0))
 
 
 func _on_karts(karts: Array) -> void:
@@ -55,7 +65,10 @@ func _on_karts(karts: Array) -> void:
 		k.landing_window_opened.connect(func(kk: Kart) -> void:
 			if kk.is_player:
 				play("ding", kk, 2.0))
-		k.shield_blocked.connect(func(kk: Kart, _kind: String) -> void: play("shield", kk))
+		k.shield_blocked.connect(func(kk: Kart, _kind: String) -> void:
+			play("shatter", kk)
+			if kk.is_player and camera:
+				camera.add_trauma(0.25))
 
 
 ## Play a one-shot. Player events are 2D; other karts are 3D at their position
@@ -130,4 +143,26 @@ func _on_items_changed(k: Kart) -> void:
 
 
 func _on_item_used(k: Kart, item: int) -> void:
-	play("zap" if item == ItemDefs.LIGHTNING else "use", k, -2.0)
+	# lightning is heard by everyone (it strikes the whole field ahead)
+	play(USE_SOUND.get(item, "use"), null if item == ItemDefs.LIGHTNING else k, -2.0)
+
+
+func _on_exploded(pos: Vector3) -> void:
+	if camera:
+		var d := camera.global_position.distance_to(pos)
+		if d < 30.0:
+			camera.add_trauma(0.35 * (1.0 - d / 30.0))
+
+
+## H3: missile lock-on beep for the player, faster as it closes in.
+func _process(delta: float) -> void:
+	if _items == null or race.player == null:
+		return
+	var d := _items.incoming_missile(race.player)
+	if d == INF:
+		_lock_beep = 0.0
+		return
+	_lock_beep -= delta
+	if _lock_beep <= 0.0:
+		play("warn", null, -4.0)
+		_lock_beep = lerpf(0.08, 0.4, clampf(d / 120.0, 0.0, 1.0))

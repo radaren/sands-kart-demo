@@ -42,6 +42,9 @@ func _ready() -> void:
 	while rm.player == null:
 		await _frames(1)
 	for s in shots:
+		if s.begins_with("it_"):
+			await _item_shot(s)
+			continue
 		if s.begins_with("seq_"):
 			await _sequence(s)
 			continue
@@ -89,6 +92,20 @@ func _sequence(name: String) -> void:
 	var n := 24
 	var every := 5
 	match name:
+		"seq_missile":
+			await _reset_scene()
+			var ai := _setup_pair(900.0, 22.0)
+			_use(p, ItemDefs.MISSILE)
+			n = 24
+			every = 3
+		"seq_wall":
+			await _reset_scene()
+			_teleport(p, 1000.0, 3.5)
+			p.speed = 26.0
+			p.facing_yaw = wrapf(p.facing_yaw - 0.6, -PI, PI)
+			p.move_yaw = p.facing_yaw
+			n = 20
+			every = 3
 		"seq_jump":
 			_teleport(p, rm.track.ramps[1] - 10.0)
 			p.speed = 30.0
@@ -106,3 +123,132 @@ func _sequence(name: String) -> void:
 			await _frames(1)
 		await _snap("%s_%02d" % [name, i])
 		print("SEQ ", i, " prog ", snappedf(p.progress, 0.1), " air ", snappedf(p.air_time, 0.01), " last ", snappedf(p.last_air_time, 0.01), " g ", p.grounded, " win ", p.landing_window, " boosts ", p.boosts.keys())
+
+
+func _setup_pair(s: float, gap: float, lat := 0.0) -> Kart:
+	var p := rm.player
+	var ai: Kart = rm.karts[1]
+	_teleport(p, s, lat)
+	_teleport(ai, s + gap, lat)
+	p.speed = 24.0
+	ai.speed = 22.0
+	for k in rm.karts:
+		if k != p and k != ai:
+			_teleport(k, 200.0 + rm.karts.find(k) * 6.0, 0.0)
+	return ai
+
+
+func _use(k: Kart, item: int) -> void:
+	k.items.clear()
+	rm.item_system.use_item(k, item)
+
+
+## Item presentation stills: it_<item>[_<phase>]
+const ITEM_S := {"it_missile": 900.0, "it_warning": 1100.0, "it_banana": 1650.0, "it_cloud": 1900.0,
+		"it_shield": 2050.0, "it_lightning": 2250.0, "it_magnet": 700.0, "it_ufo": 2650.0, "it_hud": 1250.0}
+
+
+func _reset_scene() -> void:
+	for c in rm.item_system.get_children():
+		c.queue_free()
+	for k in rm.karts:
+		k.stun_time = 0.0
+		k.cloud_time = 0.0
+		k.shield_time = 0.0
+		k.invuln_time = 0.0
+		k.slows.clear()
+		k.boosts.clear()
+		k.items.clear()
+	await _frames(2)
+
+
+func _item_shot(name: String) -> void:
+	while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+		await _frames(1)
+	await _reset_scene()
+	var p := rm.player
+	var base: float = ITEM_S.get(name, 900.0)
+	match name:
+		"it_missile":       # player fires at the kart ahead
+			var ai := _setup_pair(base, 30.0)
+			await _frames(30)
+			_use(p, ItemDefs.MISSILE)
+			await _frames(9)
+			await _snap(name + "_flight")
+			for i in 60:
+				await _frames(1)
+				if ai.stun_time > 0.0:
+					break
+			await _frames(6)
+			await _snap(name + "_hit")
+		"it_warning":       # kart behind fires at the player
+			var ai := _setup_pair(base, -25.0)
+			ai.speed = 24.0
+			await _frames(30)
+			_use(ai, ItemDefs.MISSILE)
+			await _frames(14)
+			await _snap(name)
+		"it_banana":
+			var ai := _setup_pair(base, 16.0)
+			await _frames(20)
+			_use(ai, ItemDefs.BANANA)
+			await _frames(30)
+			await _snap(name + "_peel")
+			for i in 90:
+				await _frames(1)
+				if p.stun_time > 0.0:
+					break
+			await _frames(18)
+			await _snap(name + "_spin")
+		"it_cloud":
+			var ai := _setup_pair(base, 14.0)
+			await _frames(20)
+			_use(ai, ItemDefs.CLOUD)
+			for i in 120:
+				await _frames(1)
+				if p.cloud_time > 0.0:
+					break
+			await _frames(30)
+			await _snap(name)
+		"it_shield":
+			var ai := _setup_pair(base, -22.0)
+			ai.speed = 24.0
+			await _frames(20)
+			_use(p, ItemDefs.SHIELD)
+			await _frames(30)
+			await _snap(name + "_on")
+			_use(ai, ItemDefs.MISSILE)
+			for i in 90:
+				await _frames(1)
+				if p.shield_time <= 0.0:
+					break
+			await _frames(4)
+			await _snap(name + "_break")
+		"it_lightning":
+			var ai := _setup_pair(base, -20.0)
+			await _frames(30)
+			_use(ai, ItemDefs.LIGHTNING)
+			await _frames(4)
+			await _snap(name)
+		"it_magnet":
+			var ai := _setup_pair(base, 12.0)
+			await _frames(20)
+			_use(p, ItemDefs.MAGNET)
+			await _frames(30)
+			await _snap(name)
+		"it_ufo":
+			var ai := _setup_pair(base, 13.0)
+			await _frames(20)
+			_use(p, ItemDefs.UFO)
+			for i in 120:
+				await _frames(1)
+			await _snap(name)
+		"it_hud":
+			var ai := _setup_pair(base, 26.0)
+			p.items.clear()
+			p.items_changed.emit(p)
+			p.receive_item_box()
+			await _frames(8)
+			await _snap(name + "_roll")
+			await _frames(70)
+			await _snap(name + "_slots")

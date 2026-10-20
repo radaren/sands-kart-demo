@@ -77,6 +77,33 @@ def main():
         dd = 0.16 if i < 3 else 0.6
         tt = t(dd); parts.append((np.sin(2 * np.pi * f * tt) + 0.3 * np.sin(4 * np.pi * f * tt)) * env(len(tt), 0.005, dd * 0.6))
     save("finish", np.concatenate(parts), 0.7)
+
+    # ---- item / collision presentation (I5-I9, K10, K11) ----
+    d = 0.5; n = len(t(d))
+    save("launch", lowpass(noise(n), 0.3) * env(n, 0.01, 0.35) + 0.6 * sweep(220, 1400, d) * env(n, 0.005, 0.3), 0.7)
+    d = 0.25; n = len(t(d))
+    save("toss", 0.7 * sweep(700, 300, d) * env(n, 0.004, 0.15) + 0.3 * lowpass(noise(n), 0.5) * env(n, 0.002, 0.08), 0.55)
+    d = 0.6; n = len(t(d))
+    save("puff", lowpass(noise(n), 0.06) * env(n, 0.03, 0.45) * 2.0, 0.7)
+    d = 0.7; n = len(t(d))
+    save("magnet", (np.sin(2 * np.pi * 110 * t(d)) + 0.5 * np.sin(2 * np.pi * 220 * t(d) + 3 * np.sin(2 * np.pi * 6 * t(d)))) * env(n, 0.05, 0.3), 0.55)
+    d = 0.9; n = len(t(d))
+    f = 600 + 250 * np.sin(2 * np.pi * 7 * t(d)); ph = 2 * np.pi * np.cumsum(f) / SR
+    save("ufo", np.sin(ph) * env(n, 0.05, 0.3), 0.5)
+    d = 0.05; n = len(t(d))
+    save("roll", np.sign(np.sin(2 * np.pi * 1200 * t(d))) * env(n, 0.001, 0.04), 0.3)
+    d = 0.45; n = len(t(d))
+    shat = np.zeros(n)
+    for k in range(9):
+        o = int(rng.uniform(0, 0.25) * SR); fr = rng.uniform(2500, 5200); m = min(n - o, int(0.15 * SR))
+        shat[o:o + m] += np.sin(2 * np.pi * fr * t(m / SR)) * np.exp(-t(m / SR) * 30)
+    save("shatter", shat + 0.4 * lowpass(noise(n), 0.6) * env(n, 0.001, 0.3), 0.6)
+    d = 0.6; n = len(t(d))
+    save("scrape", lowpass(noise(n), 0.5) * (0.6 + 0.4 * np.sin(2 * np.pi * 31 * t(d))) * env(n, 0.03, 0.05), 0.35)
+    d = 0.22; n = len(t(d))
+    save("bump", (lowpass(noise(n), 0.12) + 1.2 * np.sin(2 * np.pi * 95 * t(d)) * np.exp(-t(d) * 25)) * env(n, 0.002, 0.15), 0.75)
+    d = 1.0; n = len(t(d))
+    save("thunder", lowpass(noise(n), 0.04) * np.exp(-t(d) * 3.5) * 3 + 0.5 * noise(n) * np.exp(-t(d) * 40), 0.8)
     d = 0.25; n = len(t(d))
     save("ding", (np.sin(2 * np.pi * 1760 * t(d)) + 0.5 * np.sin(2 * np.pi * 2640 * t(d))) * np.exp(-t(d) * 14), 0.6)
     d = 0.3; n = len(t(d))

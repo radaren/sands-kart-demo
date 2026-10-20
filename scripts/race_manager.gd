@@ -153,6 +153,8 @@ func _physics_process(delta: float) -> void:
 				_last_count = c
 				countdown_value = c
 				countdown_tick.emit(c)
+				if c == 3 and item_system and player:
+					item_system.prewarm(player.global_position + player.forward_dir() * 8.0 + Vector3.UP)
 			if race_clock >= go_clock:
 				_go()
 		State.RACING, State.FINISHED:
