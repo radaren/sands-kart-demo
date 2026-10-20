@@ -165,6 +165,17 @@ func _ready() -> void:
 					res.visible = false
 				await _frames(2)
 				await _snap("postfinish_field")
+			"charge":         # 漂移集气 bar: drifting fill, then the full-gauge glow + 氮气+1
+				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
+					await _frames(1)
+				var cp := rm.player
+				cp.charge = 0.62
+				await _frames(40)
+				await _snap("charge_fill")
+				cp.items.clear()
+				cp.add_charge(0.45)
+				await _frames(8)
+				await _snap("charge_full")
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

@@ -79,6 +79,14 @@ extends Resource
 @export var pad_bonus := 10.0
 @export var pad_time := 1.2
 
+@export_group("Drift charge (漂移集气)")
+@export var charge_enabled := true
+@export var charge_rate := 0.22          ## gauge per second of drifting at the reference slip and speed
+@export var charge_slip_ref := 0.6       ## rad; sharper drifts fill faster (factor clamped 0.3-1.6)
+@export var charge_speed_ref := 26.0     ## m/s; factor clamped 0-1.25
+@export var charge_mini_bonus := 0.04    ## landed mini boost
+@export var charge_double_bonus := 0.06  ## landed double (perfect double x1.5)
+
 @export_group("Misc")
 @export var respawn_freeze := 1.2
 @export var shield_time := 10.0

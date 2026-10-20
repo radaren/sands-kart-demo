@@ -171,6 +171,7 @@ func _run() -> void:
 			"ai_wall_hits": rm.karts.filter(func(k): return not k.is_player).map(func(k): return k.stat_wall_hits),
 			"ai_steer_jitter_per_s": rm.karts.filter(func(k): return not k.is_player).map(func(k): var a = k.get_node("AIDriver"); return snappedf(a.stat_steer_jitter / maxf(a.stat_ticks, 1) * 60.0, 0.01)),
 			"ai_attack_hold_s": _attack_holds(),
+			"charge_fills_by_kart": rm.karts.map(func(k): return k.stat_charge_fills),
 			"sim_seconds": snappedf(rm.race_time, 0.1)})
 
 	# 7. post-finish: 10 s after the results appear, finished karts must coast

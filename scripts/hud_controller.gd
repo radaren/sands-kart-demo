@@ -12,6 +12,12 @@ var lap_label: Label
 var time_label: Label
 var speed_label: Label
 var boost_bar: ProgressBar
+var charge_bg: Panel             ## 漂移集气 gauge under the item slots
+var charge_fill: ColorRect
+var charge_label: Label
+var charge_shown := 0.0          ## animated fill (0..1)
+var _charge_glow := 0.0
+const CHARGE_W := 222.0
 var center_label: Label
 var tip_label: Label
 var wrong_label: Label
@@ -120,6 +126,29 @@ func _ready() -> void:
 		slot_labels.append(l)
 		slot_icons.append(icon)
 		_shown.append(ItemDefs.NONE)
+	# 漂移集气: charge bar right under the slots
+	charge_bg = Panel.new()
+	charge_bg.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	charge_bg.position = Vector2(-270, 142)
+	charge_bg.size = Vector2(CHARGE_W, 16)
+	var csb := StyleBoxFlat.new()
+	csb.bg_color = Color(0, 0, 0, 0.5)
+	csb.border_color = Color(0.55, 0.85, 1.0, 0.9)
+	csb.set_border_width_all(2)
+	csb.set_corner_radius_all(6)
+	charge_bg.add_theme_stylebox_override("panel", csb)
+	root.add_child(charge_bg)
+	charge_fill = ColorRect.new()
+	charge_fill.color = Color(0.3, 0.8, 1.0)
+	charge_fill.position = Vector2(2, 2)
+	charge_fill.size = Vector2(0, 12)
+	charge_bg.add_child(charge_fill)
+	charge_label = _label("集气", 13)
+	charge_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	root.add_child(charge_label)
+	charge_label.position = Vector2(-270 - 74, 139)
+	charge_label.custom_minimum_size = Vector2(70, 0)
+	charge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for it: int in ItemDefs.KEYS.keys():
 		var path := ItemDefs.icon_path(it)
 		if ResourceLoader.exists(path):
@@ -185,6 +214,28 @@ func _ready() -> void:
 	_bind_player.call_deferred()
 
 
+## 漂移集气 bar: eases toward the gauge; a fill sweeps to 100 %, glows, then
+## restarts from the carried-over overflow.
+func _update_charge(delta: float) -> void:
+	var goal := player.charge
+	if _charge_glow > 0.0:
+		_charge_glow = maxf(0.0, _charge_glow - delta)
+		charge_shown = 1.0 if _charge_glow > 0.35 else lerpf(charge_shown, goal, 1.0 - exp(-10.0 * delta))
+	else:
+		charge_shown = lerpf(charge_shown, goal, 1.0 - exp(-12.0 * delta))
+	charge_fill.size = Vector2((CHARGE_W - 4.0) * clampf(charge_shown, 0.0, 1.0), 12)
+	var g := clampf(_charge_glow / 0.8, 0.0, 1.0)
+	charge_fill.color = Color(0.3, 0.8, 1.0).lerp(Color(1.0, 0.95, 0.6), g)
+	charge_bg.modulate = Color(1, 1, 1) * (1.0 + 0.8 * g)
+	charge_bg.scale = Vector2.ONE * (1.0 + 0.08 * g)
+	charge_label.text = "集气" if player.charge_pending == 0 else "集气 +%d" % player.charge_pending
+
+
+func _on_charge_full(_k: Kart) -> void:
+	_charge_glow = 0.8
+	push_tip("氮气+1", Color(0.45, 0.9, 1.0), 2, 1.2)
+
+
 func _bind_player() -> void:
 	if race.player == null:
 		await get_tree().physics_frame
@@ -193,6 +244,7 @@ func _bind_player() -> void:
 	player = race.player
 	player.announced.connect(_on_announce)
 	player.hit_taken.connect(_on_hit)
+	player.charge_full.connect(_on_charge_full)
 	minimap.setup(race.track, race)
 
 
@@ -412,6 +464,7 @@ func _process(delta: float) -> void:
 		boost_bar.value = bm[1]
 		boost_bar.modulate = BOOST_COLORS.get(bm[0], Color(1, 1, 1, 0.35))
 		_update_slots(delta)
+		_update_charge(delta)
 		var incoming := race.item_system.incoming_missile(player) if race.item_system else INF
 		if incoming < 120.0:
 			var rate := lerpf(16.0, 4.0, clampf(incoming / 87.0, 0.0, 1.0))

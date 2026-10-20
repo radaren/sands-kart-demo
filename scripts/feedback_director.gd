@@ -76,6 +76,10 @@ func _on_karts(karts: Array) -> void:
 		k.hit_taken.connect(_on_hit)
 		k.items_changed.connect(_on_items_changed)
 		k.landed.connect(_on_landed)
+		k.charge_full.connect(func(kk: Kart) -> void:
+			if kk.is_player:
+				play("ding", kk, 4.0)
+				play("pickup", kk, -4.0))
 		k.landing_window_opened.connect(func(kk: Kart) -> void:
 			if kk.is_player:
 				play("ding", kk, 2.0))

@@ -285,19 +285,19 @@
     },
     {
       "detail": {
-        "banana_dodge_lateral_m": 3.07,
+        "banana_dodge_lateral_m": 3.27,
         "banana_hit": false,
-        "lane_swaps": 1,
+        "lane_swaps": 2,
         "passed": true,
-        "traffic_lateral_sep_m": 2.21,
-        "traffic_min_dist_m": 2.03
+        "traffic_lateral_sep_m": 2.33,
+        "traffic_min_dist_m": 1.92
       },
       "pass": true,
       "test": "t_r2_ai_avoid"
     },
     {
       "detail": {
-        "fired_at_player_after_s": 2.0,
+        "fired_at_player_after_s": 2.98,
         "held_with_other_ahead_s": 5.0,
         "taunts": 1,
         "tip": "紫电：追不上我吧？"
@@ -347,11 +347,11 @@
         "distinct": 6,
         "pitch_mul": [
           1.0,
-          1.048,
-          1.002,
-          0.977,
-          1.017,
-          1.036
+          1.013,
+          1.011,
+          0.993,
+          0.972,
+          0.963
         ]
       },
       "pass": true,
@@ -375,6 +375,26 @@
     },
     {
       "detail": {
+        "after_use": [
+          "banana",
+          "nitro"
+        ],
+        "carry": 0.03,
+        "charge_per_s_tight_wide": [
+          0.164,
+          0.067
+        ],
+        "full_slots_pending": 1,
+        "grant_items": [
+          "nitro"
+        ],
+        "straight_2s": 0.0
+      },
+      "pass": true,
+      "test": "t_s6_drift_charge"
+    },
+    {
+      "detail": {
         "air_pitch_up_down_deg": [
           3.1,
           -10.0
@@ -394,8 +414,8 @@
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 263,
-        "skid_segments": 281,
+        "skid_quads": 360,
+        "skid_segments": 216,
         "sparks": 16
       },
       "pass": true,
@@ -441,9 +461,9 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 4.64,
+        "attack_hold_s": 2.53,
         "lightning_used_in_8s_from_rank": false,
-        "missile_fired_after_s": 11.75,
+        "missile_fired_after_s": -1.0,
         "rank_at_give": 2,
         "slots_filled_first": false
       },
@@ -471,16 +491,16 @@
           1.9
         ],
         "frames_turn_in_out": [
-          8,
-          5
+          60,
+          0
         ],
         "speed_factor_slow_fast": [
           1.15,
           0.9
         ],
         "speed_vs_real_fwd": [
-          12.6,
-          14.3
+          0.0,
+          0.2
         ]
       },
       "pass": true,

@@ -12,6 +12,7 @@ signal hit_taken(kart: Kart, kind: String)
 signal items_changed(kart: Kart)
 signal boosted(kart: Kart, kind: String)
 signal wall_hit(kart: Kart, strength: float)
+signal charge_full(kart: Kart)    ## 漂移集气: gauge filled -> one nitro granted (or queued)
 signal landed(kart: Kart, air_time: float)
 signal landing_window_opened(kart: Kart)
 signal shield_blocked(kart: Kart, kind: String)
@@ -52,7 +53,10 @@ var lateral := 0.0          ## signed offset from the centre line, + is right
 var track_index := 0
 var rank := 1
 var finished := false
-var parked := false     ## post-finish: stopped on the run-off, physics off (no jitter)
+var parked := false
+var charge := 0.0              ## 漂移集气 gauge 0..1
+var charge_pending := 0        ## nitros earned while both slots were full
+var stat_charge_fills := 0     ## post-finish: stopped on the run-off, physics off (no jitter)
 var finish_time := 0.0
 var wrong_way_time := 0.0
 var speed_scale := 1.0      ## AI rubber band x personal bias
@@ -289,6 +293,10 @@ func _update_drift(delta: float) -> void:
 			double_window = 0.0
 		return
 	drift_time += delta
+	if grounded and stun_time <= 0.0 and not finished:
+		var slip_f := clampf(absf(slip) / config.charge_slip_ref, 0.3, 1.6)
+		var speed_f := clampf(absf(speed) / config.charge_speed_ref, 0.0, 1.25)
+		add_charge(config.charge_rate * slip_f * speed_f * delta)
 	if not in_drift or speed < config.drift_min_speed * 0.55:
 		_end_drift(drift_time >= config.mini_boost_min_drift and speed >= config.drift_min_speed * 0.55)
 
@@ -321,6 +329,7 @@ func _update_taps(delta: float) -> void:
 			double_delay = config.double_min_delay
 			double_elapsed = 0.0
 			stat_mini_boosts += 1
+			add_charge(config.charge_mini_bonus)
 			announced.emit(self, ["小喷!", "橙色小喷!", "紫色小喷!"][ti], Tone.GOOD)
 			return
 	elif double_window > 0.0:
@@ -336,9 +345,11 @@ func _update_taps(delta: float) -> void:
 			stat_doubles += 1
 			if double_elapsed >= config.double_perfect_from and double_elapsed <= config.double_perfect_to:
 				stat_perfect_doubles += 1
+				add_charge(config.charge_double_bonus * 1.5)
 				add_boost("mini", config.perfect_double_bonus, remaining.y + config.perfect_double_time)
 				announced.emit(self, "完美双喷!", Tone.GOOD)
 			else:
+				add_charge(config.charge_double_bonus)
 				add_boost("mini", config.double_boost_bonus, remaining.y + config.double_boost_time)
 				announced.emit(self, "双喷!", Tone.GOOD)
 			return
@@ -692,6 +703,26 @@ func receive_item_box() -> void:
 		race.on_item_box(self)
 
 
+## 漂移集气: fill the gauge; each full gauge grants one nitro (empty slot
+## first, otherwise queued until a slot frees up). Overflow carries over.
+func add_charge(amount: float) -> void:
+	if not config.charge_enabled or amount <= 0.0 or finished:
+		return
+	charge += amount
+	while charge >= 1.0:
+		charge -= 1.0
+		stat_charge_fills += 1
+		charge_pending += 1
+		charge_full.emit(self)
+	_flush_charge()
+
+
+func _flush_charge() -> void:
+	while charge_pending > 0 and items.size() < MAX_ITEMS:
+		charge_pending -= 1
+		give_item(ItemDefs.NITRO)
+
+
 func give_item(item: int) -> bool:
 	if items.size() >= MAX_ITEMS or item == ItemDefs.NONE:
 		return false
@@ -706,6 +737,7 @@ func use_item() -> void:
 	var item: int = items.pop_front()
 	items_changed.emit(self)
 	race.item_system.use_item(self, item)
+	_flush_charge()
 
 
 func respawn_on_track() -> void:

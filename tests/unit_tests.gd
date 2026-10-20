@@ -1157,6 +1157,60 @@ func t_s4_roadside_band() -> Dictionary:
 	return out
 
 
+## 漂移集气: drifting fills the gauge (sharper = faster), straights don't; a full
+## gauge grants exactly one nitro; with both slots full it waits for a slot.
+func t_s6_drift_charge() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var ctrl := p.controller
+	p.controller = null
+	var out := {}
+	p.charge = 0.0; p.charge_pending = 0
+	_stage(p, 1000.0, 26.0)
+	for i in 120:
+		p.in_throttle = 1.0; p.in_steer = 0.0; p.in_drift = false
+		await _frames(1)
+	out["straight_2s"] = snappedf(p.charge, 0.001)
+	var rates := []
+	for steer_in in [1.0, -0.6]:
+		p.charge = 0.0
+		_stage(p, 1000.0, 26.0)
+		await _frames(3)
+		p.in_throttle = 1.0; p.in_steer = 1.0; p.in_drift = true
+		for i in 90:
+			if i == 8:
+				p.in_steer = steer_in
+			await _frames(1)
+		rates.append(snappedf(p.charge / 1.5, 0.001))
+		p.in_drift = false; p.in_steer = 0.0
+		await _frames(2)
+	out["charge_per_s_tight_wide"] = rates
+	p.in_throttle = 0.0
+	await _clear_items()
+	p.charge = 0.98
+	var fills0 := p.stat_charge_fills
+	p.add_charge(0.05)
+	out["grant_items"] = p.items.map(func(x): return ItemDefs.KEYS[x])
+	out["carry"] = snappedf(p.charge, 0.001)
+	var one_ok := p.items == [ItemDefs.NITRO] and absf(p.charge - 0.03) < 0.001 and p.stat_charge_fills == fills0 + 1
+	p.items.clear()
+	p.items.append(ItemDefs.MISSILE); p.items.append(ItemDefs.BANANA)
+	p.charge = 0.0
+	p.add_charge(1.0)
+	out["full_slots_pending"] = p.charge_pending
+	var full_ok := p.items.size() == 2 and p.charge_pending == 1 and p.items[0] == ItemDefs.MISSILE
+	p.use_item()
+	await _frames(1)
+	out["after_use"] = p.items.map(func(x): return ItemDefs.KEYS[x])
+	full_ok = full_ok and p.charge_pending == 0 and p.items.size() == 2 and p.items[1] == ItemDefs.NITRO
+	p.controller = ctrl
+	await _clear_items()
+	p.charge = 0.0; p.charge_pending = 0
+	out["pass"] = out["straight_2s"] == 0.0 and rates[0] > 0.1 and rates[0] > rates[1] * 1.2 and rates[1] > 0.03 and one_ok and full_ok
+	return out
+
+
 ## V1: dust, tiered drift sparks, boost flame trail, landing dust, skid marks.
 func t_t_trail_fx() -> Dictionary:
 	await _until_racing()
