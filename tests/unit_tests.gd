@@ -218,26 +218,38 @@ func t_f_slows_use_max() -> Dictionary:
 	return {"pass": is_equal_approx(amt, 9.0), "slow_amount_with_8_9_3": amt}
 
 
-## I1: item box rows no longer cover the whole road. Coverage = trigger radius
-## + kart half-width around each box; every row must leave a gap a kart fits in.
+## I1: item box rows no longer cover the whole road. A kart triggers a box when
+## its centre is within trigger radius + kart half-width; every row must leave a
+## lane (>= 0.5 m of centre positions) that misses, and boxes must be avoidable.
 func t_g_item_boxes_not_guaranteed() -> Dictionary:
 	var tb: TrackBuilder = race.get_node("SandsTrack")
 	var reach := TrackBuilder.ITEM_TRIGGER_RADIUS + _kart_half_width()
-	var worst := 0.0
+	var rows := {}
 	for laterals in [TrackBuilder.ITEM_ROW_A, TrackBuilder.ITEM_ROW_B]:
 		var covered := 0
 		var n := 0
+		var gap := 0.0
+		var best_gap := 0.0
 		var x := -5.4
 		while x <= 5.4:
 			n += 1
+			var hit := false
 			for b in laterals:
 				if absf(x - b) <= reach:
-					covered += 1
-					break
+					hit = true
+			if hit:
+				covered += 1
+				gap = 0.0
+			else:
+				gap += 0.05
+				best_gap = maxf(best_gap, gap)
 			x += 0.05
-		worst = maxf(worst, float(covered) / n)
-	return {"pass": worst < 0.8 and TrackBuilder.ITEM_TRIGGER_RADIUS <= 0.8, "worst_row_coverage": snappedf(worst, 0.01),
-			"reach_m": snappedf(reach, 0.01), "boxes": tb.item_box_nodes.size()}
+		rows[str(laterals)] = {"coverage": snappedf(float(covered) / n, 0.01), "widest_miss_lane_m": snappedf(best_gap, 0.01)}
+	var ok := TrackBuilder.ITEM_TRIGGER_RADIUS <= 0.8
+	for r in rows.values():
+		ok = ok and r.widest_miss_lane_m >= 0.5 and r.coverage < 0.95
+	return {"pass": ok, "rows": rows, "reach_m": snappedf(reach, 0.01), "boxes": tb.item_box_nodes.size(),
+			"old_layout": "5 boxes, r=1.25 -> 100% coverage"}
 
 
 func _kart_half_width() -> float:
@@ -285,3 +297,76 @@ func t_i_rank1_no_missile_magnet() -> Dictionary:
 		if it2 == ItemDefs.MISSILE or it2 == ItemDefs.MAGNET:
 			rank2_attack += 1
 	return {"pass": bad == 0 and rank2_attack > 0, "rank1_missile_or_magnet_of_5000": bad, "rank2_missile_or_magnet_of_5000": rank2_attack}
+
+
+## K6: leaving a drift the slip angle decays smoothly (grip ramps up over 0.3 s)
+## and the nose swings back ~40% of the way instead of the path snapping to it.
+func t_j_drift_exit_grip_ramp() -> Dictionary:
+	await _until_racing()
+	var p := rm.player
+	var ctrl := p.controller
+	p.controller = null
+	_stage(p, 60.0, 24.0)
+	await _frames(2)
+	p.in_drift = true
+	p.in_steer = 0.0
+	p.drifting = true
+	p.drift_dir = 1
+	p.move_yaw = wrapf(p.facing_yaw + 0.5, -PI, PI)   # 0.5 rad slip
+	var face0 := p.facing_yaw
+	p.in_drift = false                                # release -> drift ends this tick
+	await _frames(1)
+	var s0 := absf(wrapf(p.facing_yaw - p.move_yaw, -PI, PI))
+	await _frames(3)   # 0.05 s
+	var s_005 := absf(wrapf(p.facing_yaw - p.move_yaw, -PI, PI))
+	await _wait(0.5)
+	var s_05 := absf(wrapf(p.facing_yaw - p.move_yaw, -PI, PI))
+	var face_swing := absf(wrapf(p.facing_yaw - face0, -PI, PI))
+	p.controller = ctrl
+	var old_model := 0.5 * exp(-10.0 * (4.0 / 60.0))   # old: grip 10 right away
+	return {"pass": not p.drifting and s_005 > 0.85 * s0 and s_005 > old_model + 0.05 and s_05 < 0.06 and face_swing > 0.12,
+			"slip_after_release": snappedf(s0, 0.001), "slip_after_0.05s": snappedf(s_005, 0.001),
+			"old_model_slip_after_0.05s": snappedf(old_model, 0.001), "slip_after_0.55s": snappedf(s_05, 0.001),
+			"nose_swing_back_rad": snappedf(face_swing, 0.001)}
+
+
+## K9: one wall contact = one resolution: loss 0.12+0.43*impact^2, a single
+## wall_hit event per 0.15 s, nose turned only 25% towards the wall.
+func t_k_wall_hit_single_resolution() -> Dictionary:
+	await _until_racing()
+	var p := rm.player
+	var ctrl := p.controller
+	p.controller = null
+	var out := {}
+	for angle in [0.35, 1.2]:
+		_stage(p, 50.0, 25.0, 3.0)
+		var yaw: float = p.facing_yaw - angle            # turn right, into the right wall
+		p.facing_yaw = yaw
+		p.move_yaw = yaw
+		var hits: Array = []
+		var cb := func(_k, imp): hits.append([rm.race_clock, imp])
+		p.wall_hit.connect(cb)
+		var prev_speed := p.speed
+		var before := 0.0
+		var after := 0.0
+		for i in 120:
+			prev_speed = p.speed
+			await _frames(1)
+			if hits.size() == 1 and before == 0.0:
+				before = prev_speed
+				after = p.speed
+			if hits.size() > 0 and rm.race_clock - hits[0][0] > 0.15:
+				break
+		p.wall_hit.disconnect(cb)
+		var imp: float = hits[0][1] if hits.size() > 0 else 0.0
+		var expected: float = 0.12 + 0.43 * imp * imp
+		var loss: float = 1.0 - after / maxf(before, 0.01)
+		out["angle_%.2f" % angle] = {"impact": snappedf(imp, 0.01), "speed_before": snappedf(before, 0.1), "speed_after": snappedf(after, 0.1),
+				"loss": snappedf(loss, 0.01), "expected_loss": snappedf(expected, 0.01), "wall_hit_events_in_0.15s": hits.size()}
+	p.controller = ctrl
+	var ok := true
+	for k in out:
+		var r: Dictionary = out[k]
+		ok = ok and int(r["wall_hit_events_in_0.15s"]) == 1 and absf(float(r.loss) - float(r.expected_loss)) < 0.04
+	out["pass"] = ok
+	return out

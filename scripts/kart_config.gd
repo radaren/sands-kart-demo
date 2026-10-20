@@ -12,7 +12,12 @@ extends Resource
 @export var reverse_speed := 9.0
 @export var stun_decel := 42.0
 @export var hit_invuln_time := 1.2   ## invulnerable after a hit wears off (K12)
-@export var wall_speed_loss := 0.55
+@export var wall_speed_loss := 0.55   ## legacy (unused since K9)
+@export var wall_loss_base := 0.12     ## K9: loss = base + quad * impact^2
+@export var wall_loss_quad := 0.43
+@export var wall_push_base := 0.8      ## K9: push-out = base + per_impact * impact
+@export var wall_push_impact := 2.5
+@export var wall_cooldown := 0.15
 
 @export_group("Handling")
 @export var turn_rate_low := 2.3
@@ -31,6 +36,8 @@ extends Resource
 @export var drift_slip_drag := 2.4
 @export var mini_boost_min_drift := 0.45
 @export var tap_window := 0.35
+@export var exit_grip_time := 0.3      ## K6: grip ramps drift_grip -> grip after a drift
+@export var exit_facing_share := 0.4   ## K6: nose swings back this share of the slip
 
 @export_group("Boosts")
 @export var mini_boost_bonus := 7.5

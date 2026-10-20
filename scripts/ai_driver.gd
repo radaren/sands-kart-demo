@@ -35,6 +35,8 @@ var _want_drift := false
 var _start_tap_at := -1.0
 var _prev_item_input := false
 var stat_drifts := 0
+var _box_row_s := -1.0
+var _box_go := false
 
 
 func _ready() -> void:
@@ -100,6 +102,15 @@ func compute(delta: float) -> void:
 	if ahead.x < 45.0:
 		var inside := ahead.y * -(1.2 + 2.2 * aggression)   # right turn (-1) -> +lateral (right)
 		lane = lerpf(lane * 0.4, inside, clampf((45.0 - ahead.x) / 25.0, 0.0, 1.0))
+	elif kart.items.size() < Kart.MAX_ITEMS and kart.race != null and kart.race.get("track_builder") != null:
+		# I1 follow-up: boxes no longer cover the road, so aim for one (most of the time)
+		var bl: float = kart.race.track_builder.box_lateral_ahead(s + 6.0, s + 55.0, kart.lateral)
+		if not is_nan(bl):
+			if absf(_box_row_s - s) > 60.0:
+				_box_row_s = s
+				_box_go = _rng.randf() < 0.7 + 0.25 * aggression
+			if _box_go:
+				lane = bl
 	var target := track.position_at(s + look) + track.right_at(s + look) * lane
 	var to := target - kart.global_position
 	var desired := atan2(-to.x, -to.z)

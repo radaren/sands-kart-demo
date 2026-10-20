@@ -68,6 +68,8 @@ var steer_state := 0.0
 var freeze_time := 0.0
 var external := Vector3.ZERO
 var slip := 0.0
+var exit_grip_left := 0.0      ## K6: time left in the post-drift grip ramp
+var _wall_cd := 0.0            ## K9: wall impact cooldown
 
 # --- drift / boost ----------------------------------------------------------------
 var drifting := false
@@ -243,6 +245,8 @@ func _update_drift(delta: float) -> void:
 
 
 func _end_drift(qualified: bool) -> void:
+	if drifting:
+		exit_grip_left = config.exit_grip_time
 	drifting = false
 	drift_dir = 0
 	if qualified:
@@ -358,7 +362,18 @@ func _update_heading(delta: float) -> void:
 			rate *= config.air_control
 		var dir_sign := 1.0 if speed >= 0.0 else -1.0
 		facing_yaw -= steer_state * rate * dir_sign * delta
-		move_yaw = lerp_angle(move_yaw, facing_yaw, 1.0 - exp(-config.grip * delta))
+		if exit_grip_left > 0.0:
+			# K6: leaving a drift, grip ramps up over exit_grip_time and the nose
+			# swings back part of the way, so the exit doesn't "snap"
+			var k := 1.0 - exit_grip_left / maxf(config.exit_grip_time, 0.001)
+			var g := lerpf(config.drift_grip, config.grip, k * k)
+			exit_grip_left = maxf(0.0, exit_grip_left - delta)
+			var a := 1.0 - exp(-g * delta)
+			var gap := wrapf(facing_yaw - move_yaw, -PI, PI)
+			move_yaw = wrapf(move_yaw + gap * a * (1.0 - config.exit_facing_share), -PI, PI)
+			facing_yaw = wrapf(facing_yaw - gap * a * config.exit_facing_share, -PI, PI)
+		else:
+			move_yaw = lerp_angle(move_yaw, facing_yaw, 1.0 - exp(-config.grip * delta))
 	facing_yaw = wrapf(facing_yaw, -PI, PI)
 	move_yaw = wrapf(move_yaw, -PI, PI)
 	slip = wrapf(facing_yaw - move_yaw, -PI, PI)
@@ -401,6 +416,13 @@ func _on_landed(air: float) -> void:
 
 
 func _handle_collisions() -> void:
+	# K9: resolve only the strongest wall contact per tick (corners used to
+	# stack up to 4 speed cuts), gentle nose re-alignment, impact-scaled push,
+	# short cooldown so scraping along a wall doesn't keep re-triggering.
+	_wall_cd = maxf(0.0, _wall_cd - get_physics_process_delta_time())
+	var best_impact := 0.0
+	var best_n := Vector3.ZERO
+	var dir := move_dir()
 	for i in get_slide_collision_count():
 		var col := get_slide_collision(i)
 		var n := col.get_normal()
@@ -414,21 +436,26 @@ func _handle_collisions() -> void:
 		if hn.length_squared() < 0.0001:
 			continue
 		hn = hn.normalized()
-		var dir := move_dir()
 		var impact := -dir.dot(hn)
-		if impact <= 0.05:
-			continue
-		speed *= 1.0 - config.wall_speed_loss * clampf(impact * 1.3, 0.0, 1.0)
-		var tangent := dir - hn * dir.dot(hn)
-		if tangent.length_squared() > 0.0001:
-			tangent = tangent.normalized()
-			move_yaw = atan2(-tangent.x, -tangent.z)
-			facing_yaw = lerp_angle(facing_yaw, move_yaw, 0.5)
-		external += hn * (1.5 + 3.0 * impact)
-		if drifting:
-			_end_drift(false)
-		if impact > 0.35:
-			wall_hit.emit(self, impact)
+		if impact > best_impact:
+			best_impact = impact
+			best_n = hn
+	if best_impact <= 0.05:
+		return
+	var tangent := dir - best_n * dir.dot(best_n)
+	if tangent.length_squared() > 0.0001:
+		tangent = tangent.normalized()
+		move_yaw = atan2(-tangent.x, -tangent.z)
+		facing_yaw = lerp_angle(facing_yaw, move_yaw, 0.25)
+	if _wall_cd > 0.0:
+		return
+	_wall_cd = config.wall_cooldown
+	var impact := clampf(best_impact, 0.0, 1.0)
+	speed *= 1.0 - (config.wall_loss_base + config.wall_loss_quad * impact * impact)
+	external += best_n * (config.wall_push_base + config.wall_push_impact * impact)
+	if drifting and impact > 0.3:
+		_end_drift(false)
+	wall_hit.emit(self, impact)
 
 
 func _bump(other: Kart, n: Vector3) -> void:

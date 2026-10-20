@@ -596,8 +596,8 @@ void fragment() {
 """
 
 
-const ITEM_ROW_A := [-4.0, 0.0, 4.0]   ## lateral metres (for a 12 m road)
-const ITEM_ROW_B := [-2.0, 2.0]
+const ITEM_ROW_A := [-4.6, -2.1, 2.1, 4.6]   ## lateral metres (for a 12 m road): centre gap
+const ITEM_ROW_B := [-3.7, 0.0, 3.7]          ## staggered: gaps between the boxes
 const ITEM_TRIGGER_RADIUS := 0.8
 
 
@@ -607,7 +607,7 @@ func _build_item_rows() -> void:
 	var row_i := -1
 	for s in track.item_rows:
 		row_i += 1
-		# I1: not a wall of boxes any more — 3 / 2 boxes, staggered row to row,
+		# I1: not a wall of boxes any more — 4 / 3 boxes, staggered row to row,
 		# small triggers, so some lines miss and picking boxes is a choice.
 		var laterals: Array = ITEM_ROW_A if row_i % 2 == 0 else ITEM_ROW_B
 		for slot in laterals.size():
@@ -619,6 +619,8 @@ func _build_item_rows() -> void:
 			holder.set_meta("base_y", holder.position.y)
 			holder.set_meta("phase", float(slot) * 1.3 + s * 0.01)
 			holder.set_meta("active", true)
+			holder.set_meta("s", s)
+			holder.set_meta("lateral", lateral)
 			add_child(holder)
 			var mi := MeshInstance3D.new()
 			mi.name = "Mesh"
@@ -679,6 +681,24 @@ func _process(delta: float) -> void:
 		var base_y: float = holder.get_meta("base_y", holder.position.y)
 		var phase: float = holder.get_meta("phase", 0.0)
 		holder.position.y = base_y + sin(t * 2.0 + phase) * 0.18
+
+
+## Lateral offset of the active item box closest to `lateral` in the first row
+## found within [s_from, s_to] (NAN when none). Used by AI to aim for boxes.
+func box_lateral_ahead(s_from: float, s_to: float, lateral: float) -> float:
+	var best := NAN
+	var best_s := INF
+	for h in item_box_nodes:
+		if not h.get_meta("active", false):
+			continue
+		var hs: float = h.get_meta("s", -1.0)
+		if hs < s_from or hs > s_to or hs > best_s + 1.0:
+			continue
+		var hl: float = h.get_meta("lateral", 0.0)
+		if hs < best_s - 1.0 or is_nan(best) or absf(hl - lateral) < absf(best - lateral):
+			best = hl
+			best_s = hs
+	return best
 
 
 ## Nearest active item box lateral offsets within [s_from, s_to]; used by AI.
