@@ -52,6 +52,9 @@ var stat_mistakes := 0
 var _lane_s := 0.0
 var stat_steer_jitter := 0.0     ## sum |d steer| (A5 measure)
 var stat_ticks := 0
+var _traffic_t := 0.0
+var _traffic_lane := NAN
+var stat_lane_swaps := 0       ## A4: traffic/banana lane changes
 var _prev_out_steer := 0.0
 var _box_row_s := -1.0
 var _box_go := false
@@ -147,6 +150,11 @@ func compute(delta: float) -> void:
 		lane = box_lane
 		lane_rate = 7.0       # committing to a box needs a quicker line change
 		look = minf(look, 13.0)   # and tighter tracking to hit a 1.35 m reach
+	else:
+		lane = _traffic(delta, s, sp, lane)
+		if lane != lane_offset:
+			lane_rate = 6.0
+			look = minf(look, 12.0)   # dodging needs the tighter tracking used for boxes
 	_lane_s = move_toward(_lane_s, lane, lane_rate * delta)    # A4/A5: lane changes at <= 3 m/s
 	lane = _lane_s
 	var target := track.position_at(s + look) + track.right_at(s + look) * lane
@@ -294,6 +302,52 @@ func roll_mistake() -> bool:
 # ---------- item AI ----------
 ## A4/I1: choose a box in the next row - near our line, but not one that a kart
 ## ahead on (about) the same line will take first.
+## A4: pick a line around slower karts and bananas on straights. Candidate
+## lanes are scored every 0.25 s; returns the preferred lane.
+func _traffic(delta: float, s: float, sp: float, base: float) -> float:
+	_traffic_t -= delta
+	if _traffic_t > 0.0:
+		return base if is_nan(_traffic_lane) else _traffic_lane
+	_traffic_t = 0.25
+	var track := kart.track
+	var tdir := track.tangent_at(s)
+	var right := track.right_at(s)
+	var block := []     # [lateral, weight]
+	for k: Kart in kart.race.karts:
+		if k == kart:
+			continue
+		var ahead_m := k.progress - s
+		# a kart up to 15 m ahead that we close on faster than 1 m/s
+		if ahead_m > 0.5 and ahead_m < 15.0 and sp - k.speed > 1.0:
+			block.append([k.lateral, 4.0, 2.0])
+	for b in kart.get_tree().get_nodes_in_group("bananas"):
+		if not b.has_method("rest_position"):
+			continue
+		var rel: Vector3 = b.rest_position() - kart.global_position
+		var along := rel.dot(tdir)
+		if along > 0.0 and along < 30.0:
+			block.append([kart.lateral + rel.dot(right), 6.0, 2.6])
+	if block.is_empty():
+		_traffic_lane = NAN
+		return base
+	var best := base
+	var best_score := -INF
+	for cand in [base, -3.6, -1.8, 0.0, 1.8, 3.6]:
+		var score := -0.25 * absf(cand - kart.lateral)    # prefer small moves
+		for bl in block:
+			var gap := absf(cand - float(bl[0]))
+			if gap < float(bl[2]):
+				score -= float(bl[1]) * (1.0 - gap / float(bl[2]) * 0.5)
+		if score > best_score + 0.01:
+			best_score = score
+			best = cand
+	if is_nan(_traffic_lane) or absf(best - _traffic_lane) > 0.5:
+		if absf(best - base) > 0.5:
+			stat_lane_swaps += 1
+	_traffic_lane = best
+	return best
+
+
 func _pick_box(s: float) -> float:
 	var row: Array = kart.race.track_builder.boxes_in_row(s - 1.0, s + 55.0)
 	var best := NAN

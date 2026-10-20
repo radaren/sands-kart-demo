@@ -7,12 +7,18 @@ var _from := Vector3.ZERO
 var _to := Vector3.ZERO
 var _landed := false
 var forward := false
+
+
+## A4: where the peel is (or will land) - what an AI dodges.
+func rest_position() -> Vector3:
+	return _to
 const FWD_BASE := 9.0
 const FWD_TIME := 0.6
 var peel: Node3D
 
 
 func _ready() -> void:
+	add_to_group("bananas")   # A4: AI drivers steer around these
 	life = 45.0
 	forward = user.item_aim > 0
 	if forward:   # I8: lob it ahead, clear of the thrower's own path timing

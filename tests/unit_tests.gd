@@ -869,6 +869,66 @@ func t_q_item_balance() -> Dictionary:
 	return out
 
 
+## A4: AI changes line around a slower kart and a banana on a straight.
+func t_r2_ai_avoid() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var a := _ai(2)
+	var b := _ai(3)
+	var p := rm.player
+	var drv := a.get_node("AIDriver") as AIDriver
+	var out := {}
+	for k in rm.karts:
+		if k != a and k != b:
+			_stage(k, 300.0 + rm.karts.find(k) * 8.0, 0.0)
+	var bctrl := b.controller
+	b.controller = null
+	b.in_throttle = 0.0; b.in_steer = 0.0
+	var lane := drv.lane_offset
+	_stage(b, 1326.0, 9.0, lane)
+	_stage(a, 1308.0, 24.0, lane)
+	var swaps0 := drv.stat_lane_swaps
+	var min_d := 99.0
+	var max_sep := 0.0
+	for i in 150:
+		await _frames(1)
+		b.in_throttle = 0.35
+		var d := a.global_position.distance_to(b.global_position)
+		min_d = minf(min_d, d)
+		if absf(a.progress - b.progress) < 2.0:
+			max_sep = maxf(max_sep, absf(a.lateral - b.lateral))
+	out["traffic_min_dist_m"] = snappedf(min_d, 0.01)
+	out["traffic_lateral_sep_m"] = snappedf(max_sep, 0.01)
+	out["passed"] = a.progress > b.progress
+	b.controller = bctrl
+	_stage(b, 350.0, 0.0)
+	# banana dropped on the AI's line ~30 m ahead
+	var pctrl := p.controller
+	p.controller = null
+	_stage(p, 1430.0, 0.0, lane)
+	p.in_throttle = 0.0
+	await _frames(5)
+	p.items.clear()
+	p.items.append(ItemDefs.BANANA)
+	p.use_item()
+	await _frames(40)
+	_stage(p, 360.0, 0.0)
+	_stage(a, 1400.0, 22.0, lane)
+	var hit := false
+	for i in 120:
+		await _frames(1)
+		if a.stun_kind == "banana":
+			hit = true
+	out["banana_hit"] = hit
+	out["banana_dodge_lateral_m"] = snappedf(absf(a.lateral - lane), 0.01)
+	out["lane_swaps"] = drv.stat_lane_swaps - swaps0
+	p.controller = pctrl
+	p.freeze_time = 0.0
+	await _clear_items()
+	out["pass"] = out["passed"] and min_d > 1.5 and not hit and out["lane_swaps"] >= 2
+	return out
+
+
 ## I8: banana thrown forward (Q) lands ahead and hits the kart in front, never
 ## the thrower; a clouded AI drifts off its line more.
 func t_r_banana_forward() -> Dictionary:
