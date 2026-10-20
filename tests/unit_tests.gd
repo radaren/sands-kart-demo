@@ -962,6 +962,44 @@ func t_s_body_posture() -> Dictionary:
 	return out
 
 
+## V2: visual drift yaw follows slip (8-22 deg) and eases in/out.
+func t_s2_drift_visual_yaw() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var v := p.get_node("Visual") as KartVisual
+	var ctrl := p.controller
+	p.controller = null
+	var out := {}
+	var mags := []
+	for steer_in in [1.0, -0.6]:
+		_stage(p, 1000.0, 26.0)
+		await _frames(3)
+		p.in_throttle = 1.0; p.in_steer = 1.0; p.in_drift = true
+		var first := -1.0
+		var mx := 0.0
+		for i in 70:
+			if i == 8:
+				p.in_steer = steer_in
+			await _frames(1)
+			if p.drifting and first < 0.0:
+				first = absf(v.drift_yaw)
+			if i > 40:
+				mx = maxf(mx, absf(v.drift_yaw))
+		mags.append([snappedf(rad_to_deg(first), 0.1), snappedf(rad_to_deg(mx), 0.1), snappedf(rad_to_deg(absf(p.slip)), 0.1)])
+		p.in_drift = false; p.in_steer = 0.0
+		await _frames(1)
+		var after1 := absf(v.drift_yaw)
+		await _frames(30)
+		out["release_1f_30f_deg_%s" % steer_in] = [snappedf(rad_to_deg(after1), 0.1), snappedf(rad_to_deg(absf(v.drift_yaw)), 0.1)]
+	p.in_throttle = 0.0
+	p.controller = ctrl
+	out["first_frame_max_slip_deg_tight_wide"] = mags
+	out["pass"] = mags[0][0] < 6.0 and mags[0][1] >= 8.0 and mags[0][1] <= 22.01 and mags[1][1] >= 8.0 \
+			and absf(mags[0][1] - mags[1][1]) > 0.5 and out["release_1f_30f_deg_1.0"][0] > 3.0 and out["release_1f_30f_deg_1.0"][1] < 1.0
+	return out
+
+
 ## V1: dust, tiered drift sparks, boost flame trail, landing dust, skid marks.
 func t_t_trail_fx() -> Dictionary:
 	await _until_racing()

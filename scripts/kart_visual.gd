@@ -160,6 +160,9 @@ var _ring_t := -1.0
 var _t := 0.0
 
 
+var drift_yaw := 0.0   ## V2: current visual drift yaw offset (rad)
+
+
 func _ready() -> void:
 	kart = get_parent() as Kart
 	# landing-boost cue: a bright ring bursts out from the wheels on touchdown
@@ -206,9 +209,13 @@ func _process(delta: float) -> void:
 	if kart == null or model == null:
 		return
 	_t += delta
-	var yaw_off := 0.0
+	# V2: drift body angle follows the real slip (10 deg + 0.3 x slip, 8-22 deg)
+	# and eases in/out instead of snapping to a fixed 16 deg
+	var yaw_goal := 0.0
 	if kart.drifting:
-		yaw_off = float(kart.drift_dir) * -deg_to_rad(16.0)
+		yaw_goal = float(kart.drift_dir) * -clampf(deg_to_rad(10.0) + 0.3 * absf(kart.slip), deg_to_rad(8.0), deg_to_rad(22.0))
+	drift_yaw = lerpf(drift_yaw, yaw_goal, 1.0 - exp(-10.0 * delta))
+	var yaw_off := drift_yaw
 	_hit_reaction(delta)
 	var up := kart.ground_normal.normalized() if kart.grounded else Vector3.UP
 	var yaw := kart.facing_yaw + yaw_off

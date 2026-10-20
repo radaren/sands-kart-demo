@@ -296,6 +296,32 @@
     },
     {
       "detail": {
+        "first_frame_max_slip_deg_tight_wide": [
+          [
+            1.6,
+            21.9,
+            43.8
+          ],
+          [
+            1.7,
+            13.3,
+            7.6
+          ]
+        ],
+        "release_1f_30f_deg_-0.6": [
+          7.0,
+          0.0
+        ],
+        "release_1f_30f_deg_1.0": [
+          18.5,
+          0.1
+        ]
+      },
+      "pass": true,
+      "test": "t_s2_drift_visual_yaw"
+    },
+    {
+      "detail": {
         "air_pitch_up_down_deg": [
           3.1,
           -10.0
@@ -311,13 +337,13 @@
     },
     {
       "detail": {
-        "dust": 20,
+        "dust": 21,
         "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
-        "skid_quads": 73,
-        "skid_segments": 35,
-        "sparks": 15
+        "skid_quads": 157,
+        "skid_segments": 221,
+        "sparks": 16
       },
       "pass": true,
       "test": "t_t_trail_fx"
@@ -362,9 +388,9 @@
     {
       "detail": {
         "ai_rank": 2,
-        "attack_hold_s": 5.34,
+        "attack_hold_s": 4.27,
         "lightning_used_in_8s_from_rank": false,
-        "missile_fired_after_s": -1.0,
+        "missile_fired_after_s": 8.75,
         "rank_at_give": 2,
         "slots_filled_first": false
       },
