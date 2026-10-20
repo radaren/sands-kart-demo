@@ -13,6 +13,7 @@ signal player_finished(kart: Kart, place: int, time: float)   ## H6 finish prese
 signal restart_requested
 signal title_requested
 signal karts_spawned(karts: Array)
+signal rival_taunt(rival: Kart, text: String)   ## A7: rival overtook / was overtaken by the player
 
 enum State { COUNTDOWN, RACING, FINISHED }
 
@@ -125,6 +126,11 @@ func _spawn_karts() -> void:
 				rb.target_gap = 20.0 if ai.is_rival else [-60.0, -25.0, 15.0, 45.0, 80.0][i % 5]
 				if ai.is_rival:
 					kart.base_speed_bias = 1.03
+					# A7: the rival sticks to the player - tight band, stronger pull
+					rb.dead_zone = 8.0
+					rb.range_m = 45.0
+					rb.max_boost = 0.12
+					rival = kart
 				kart.speed_scale = kart.base_speed_bias
 			kart.add_child(ai)
 			kart.controller = ai
@@ -170,10 +176,31 @@ func _physics_process(delta: float) -> void:
 			race_time = race_clock - go_clock
 	_track_karts(delta)
 	_update_ranking()
+	_check_rival()
 	if state == State.RACING and _player_finish_clock >= 0.0:
 		var all_done := finish_order.size() == karts.size()
 		if all_done or race_clock - _player_finish_clock >= RESULTS_WAIT:
 			_complete_race()
+
+
+var rival: Kart
+var _rival_ahead := false
+var _rival_taunt_clock := -99.0
+var rival_taunts := 0
+
+
+## A7: a taunt tip when the rival passes the player (or a grumble when passed),
+## at most every 8 s.
+func _check_rival() -> void:
+	if rival == null or player == null or state != State.RACING or player.finished:
+		return
+	var ahead := rival.rank < player.rank
+	if ahead != _rival_ahead:
+		_rival_ahead = ahead
+		if race_time > 3.0 and race_clock - _rival_taunt_clock > 8.0:
+			_rival_taunt_clock = race_clock
+			rival_taunts += 1
+			rival_taunt.emit(rival, ("%s：追不上我吧？" if ahead else "%s：哼，别得意！") % rival.display_name)
 
 
 func _go() -> void:

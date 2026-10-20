@@ -108,7 +108,7 @@ func _run() -> void:
 	player.controller = ai
 
 	# 3. item pickup + use -------------------------------------------------
-	var got: bool = await _wait_until(func(): return player.item_slots[0] != null, 60.0)
+	var got: bool = await _wait_until(func(): return player.item_slots[0] != null, 75.0)   # rows are ~400 m apart; 75 s covers 6 rows
 	var item: Variant = player.item_slots[0]
 	var item_key: String = ItemDefs.KEYS.get(item, "none") if got else "none"
 	var used_before: int = rm.item_system.used_log.size()

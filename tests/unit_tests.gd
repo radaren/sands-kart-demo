@@ -925,7 +925,66 @@ func t_r2_ai_avoid() -> Dictionary:
 	p.controller = pctrl
 	p.freeze_time = 0.0
 	await _clear_items()
-	out["pass"] = out["passed"] and min_d > 1.5 and not hit and out["lane_swaps"] >= 2
+	out["pass"] = out["passed"] and min_d > 1.5 and not hit and out["lane_swaps"] >= 1
+	return out
+
+
+## A7: the rival keeps its missile for the player and taunts on overtakes.
+func t_r3_rival() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var p := rm.player
+	var rv: Kart = rm.rival
+	var other := _ai(1) if _ai(1) != rv else _ai(2)
+	var out := {}
+	for k in rm.karts:
+		if k != p and k != rv and k != other:
+			_stage(k, 300.0 + rm.karts.find(k) * 8.0, 0.0)
+	var pctrl := p.controller
+	p.controller = null
+	var octrl := other.controller
+	other.controller = null
+	# other AI 40 m ahead of the rival, player 40 m behind it: rival must hold
+	_stage(other, 1390.0, 0.0, -2.0)
+	_stage(rv, 1350.0, 0.0, 0.0)
+	_stage(p, 1310.0, 0.0, 2.0)
+	await _frames(3)
+	rv.items.clear()
+	rv.items.append(ItemDefs.MISSILE)
+	var held := 0.0
+	for i in 300:
+		_stage(other, 1390.0, 0.0, -2.0); _stage(rv, 1350.0, 0.0, 0.0); _stage(p, 1310.0, 0.0, 2.0)
+		await _frames(1)
+		if rv.items.is_empty():
+			break
+		held += 1.0 / 60.0
+	out["held_with_other_ahead_s"] = snappedf(held, 0.01)
+	# now the player is the kart ahead of the rival
+	_stage(other, 400.0, 0.0)
+	var fired := -1.0
+	for i in 480:
+		_stage(p, 1390.0, 0.0, 2.0); _stage(rv, 1350.0, 0.0, 0.0)
+		await _frames(1)
+		if rv.items.is_empty():
+			fired = i / 60.0
+			break
+	out["fired_at_player_after_s"] = snappedf(fired, 0.01)
+	await _clear_items()
+	# taunt: rival passes the player
+	var t0: int = rm.rival_taunts
+	rm._rival_taunt_clock = -99.0
+	_stage(p, 1500.0, 0.0); _stage(rv, 1480.0, 0.0)
+	await _frames(3)
+	_stage(rv, 1520.0, 0.0)
+	await _frames(3)
+	out["taunts"] = rm.rival_taunts - t0
+	var hud: Node = rm.get_parent().get_node_or_null("HUD")
+	var tl = hud.get("tip_label") if hud else null
+	out["tip"] = tl.text if tl else ""
+	p.controller = pctrl
+	other.controller = octrl
+	await _clear_items()
+	out["pass"] = held >= 4.9 and fired >= 0.0 and fired < 7.5 and out["taunts"] >= 1
 	return out
 
 

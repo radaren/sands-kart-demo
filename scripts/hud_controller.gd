@@ -179,6 +179,7 @@ func _ready() -> void:
 	_build_pause_menu(root)
 	race.countdown_tick.connect(_on_countdown)
 	race.player_finished.connect(_on_player_finished)
+	race.rival_taunt.connect(func(_r: Kart, text: String) -> void: push_tip(text, Color(0.75, 0.45, 1.0), 2, 1.8))   # A7
 	if race.item_system:
 		race.item_system.screen_flash.connect(_on_flash)
 	_bind_player.call_deferred()

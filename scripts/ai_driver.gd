@@ -427,6 +427,18 @@ func _decide_item(delta: float, r_ahead: float) -> bool:
 			else:
 				_shield_wait = -1.0
 				use = leading and gap_behind < 25.0 and _rng.randf() < defense * 0.04
+	# A7: the rival saves attacks for the player while they're close, and drops
+	# bananas / ink when the player sits right behind it
+	var pl: Kart = rm.player if "player" in rm else null
+	if is_rival and pl != null and not pl.finished:
+		var pg := pl.progress - kart.progress
+		if item in [ItemDefs.MISSILE, ItemDefs.MAGNET, ItemDefs.UFO] and absf(pg) < 120.0 and _item_hold < 12.0:
+			use = use and ahead == pl
+			if ahead == pl and pg > 5.0 and pg < 80.0 and _item_hold >= _attack_hold * 0.5:
+				use = true
+		elif item in [ItemDefs.BANANA, ItemDefs.CLOUD] and behind == pl and -pg < 25.0:
+			use = true
+			_aim_fwd = false
 	# defensive drivers hold attack items longer, aggressive ones fire sooner
 	if not use and _item_hold > 9.0 + 8.0 * defense and not (item == ItemDefs.LIGHTNING and kart.rank < 4):
 		use = true
