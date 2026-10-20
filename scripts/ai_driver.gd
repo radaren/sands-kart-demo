@@ -117,6 +117,10 @@ func compute(delta: float) -> void:
 		kart.in_tap = _start_tap_at > 0.0 and clock >= _start_tap_at and clock - delta < _start_tap_at
 		return
 
+	if kart.finished:
+		_coast(delta, track, s, sp)
+		return
+
 	# ---------- steering ----------
 	var look := clampf(0.8 * sp, 12.0, 28.0)    # A5: 0.8 s of travel (was 8-15 m)
 	if kart.cloud_time > 0.0:
@@ -262,6 +266,42 @@ func compute(delta: float) -> void:
 		kart.in_item_forward = kart.in_item and _aim_fwd
 		if kart.in_item_forward:
 			kart.in_item = false
+
+
+# ---------- post-finish ----------
+const COAST_LANES := [-4.0, 4.0, -2.4, 2.4, -0.8, 0.8]
+const COAST_CRUISE := 15.0     ## m/s down the run-off
+const COAST_DECEL := 3.0       ## m/s^2 planned stop
+
+
+## After the finish line: cruise down the run-off on a lane picked by finish
+## place, brake smoothly to a stop before the road ends (staggered by place so
+## nobody stacks), then park the kart. No items, drifts or boost taps.
+func _coast(delta: float, track: TrackData, s: float, sp: float) -> void:
+	var place: int = maxi(0, kart.race.finish_order.find(kart)) if kart.race != null and "finish_order" in kart.race else 0
+	var lane: float = COAST_LANES[place % COAST_LANES.size()]
+	var stop_s := track.length - 12.0 - float(place % 3) * 8.0
+	var remain := maxf(stop_s - s, 0.0)
+	var want := minf(COAST_CRUISE, sqrt(2.0 * COAST_DECEL * remain)) if remain > 1.5 else 0.0
+	if sp > want + 6.0:
+		want = sp - 6.0     # shed the finish speed gently (no slam)
+	_lane_s = move_toward(_lane_s, lane, 1.5 * delta)
+	var look := clampf(0.8 * sp, 6.0, 16.0)
+	var ts := minf(s + look, track.length - 0.5)
+	var target := track.position_at(ts) + track.right_at(ts) * _lane_s
+	var to := target - kart.global_position
+	var diff := wrapf(atan2(-to.x, -to.z) - kart.facing_yaw, -PI, PI)
+	var dist := maxf(to.length(), 4.0)
+	var frac := clampf(sp / kart.config.max_speed, 0.0, 1.0)
+	var max_rate := lerpf(kart.config.turn_rate_low, kart.config.turn_rate_high, frac) * clampf(sp / 4.0, 0.25, 1.0)
+	kart.in_steer = clampf(-(2.0 * maxf(sp, 4.0) * sin(diff) / dist) / maxf(max_rate, 0.3), -1.0, 1.0)
+	kart.in_throttle = clampf((want - sp) * 0.6, -0.7, 0.8)
+	kart.in_drift = false
+	kart.in_tap = false
+	kart.in_item = false
+	kart.in_item_forward = false
+	if sp < 0.35 and remain < 4.0:
+		kart.parked = true
 
 
 # ---------- skill model (A1-A3), public for tests ----------

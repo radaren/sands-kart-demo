@@ -146,6 +146,25 @@ func _ready() -> void:
 					await _frames(1)
 				await _frames(80)
 				await _snap("finish_results")
+			"postfinish":     # finish bug: whole field crosses together, 8 s after the results open
+				while rm.state != RaceManager.State.RACING or rm.race_time < 3.0:
+					await _frames(1)
+				var i := 0
+				for k in rm.karts:
+					_teleport(k, rm.track.finish_offset - 25.0 - (i / 2) * 7.0, -3.0 + (i % 2) * 6.0)
+					var trk = rm.trackers[k]
+					trk.next_index = trk.checkpoints.size()
+					k.speed = 24.0
+					i += 1
+				while not rm.race_finished:
+					await _frames(1)
+				await _frames(480)
+				await _snap("postfinish_results")
+				var res := rm.get_parent().get_node_or_null("Results")
+				if res:
+					res.visible = false
+				await _frames(2)
+				await _snap("postfinish_field")
 			"pack":
 				while rm.state != RaceManager.State.RACING or rm.race_time < 4.0:
 					await _frames(1)

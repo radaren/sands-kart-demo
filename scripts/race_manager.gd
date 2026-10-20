@@ -236,6 +236,8 @@ func _track_karts(delta: float) -> void:
 			k.wrong_way_time = maxf(0.0, k.wrong_way_time - delta * 2.0)
 		# fell off / stuck / wrong way (AI) -> respawn
 		var ground_y := track.position_at(k.progress).y
+		if k.parked:
+			continue
 		if k.global_position.y < ground_y - 12.0:
 			k.respawn_on_track()
 			continue
@@ -254,6 +256,7 @@ func _track_karts(delta: float) -> void:
 
 func _on_kart_finished(k: Kart) -> void:
 	k.finished = true
+	k.on_finished()
 	k.finish_time = race_time
 	finish_order.append(k)
 	kart_finished.emit(k)

@@ -27,6 +27,8 @@ var trauma := 0.0            ## 0..1, shake = trauma^2 * noise (C5)
 var fov_kick := 0.0          ## extra degrees, decays over ~0.35 s (C4)
 var _shake_t := 0.0
 var _noise := FastNoiseLite.new()
+var _fin_t := -1.0          ## seconds since the player finished (orbit mode)
+var _orbit_yaw := 0.0
 
 
 static func damp(a: float, b: float, rate: float, dt: float) -> float:
@@ -62,6 +64,9 @@ func _process(delta: float) -> void:
 		return
 	var xf := k.get_global_transform_interpolated()
 	target_origin = xf.origin
+	if k.finished and _have:
+		_finish_orbit(k, xf, delta)
+		return
 	var want_yaw := _kart_yaw(k)
 	var back := k.look_back
 	var snap := not _have or back != _back
@@ -105,3 +110,32 @@ func _process(delta: float) -> void:
 	_fov = damp(_fov, target_fov, 4.0, delta)
 	fov_kick = move_toward(fov_kick, 0.0, delta * maxf(fov_kick, 1.0) / 0.35)
 	fov = _fov + fov_kick
+
+
+## Post-finish: ease from the chase view into a slow orbit around the kart,
+## pulled in front of any wall/building between kart and camera (no clipping),
+## no shake.
+func _finish_orbit(k: Kart, xf: Transform3D, delta: float) -> void:
+	if _fin_t < 0.0:
+		_fin_t = 0.0
+		_orbit_yaw = _yaw
+	_fin_t += delta
+	_orbit_yaw += 0.22 * delta * clampf(_fin_t / 2.0, 0.0, 1.0)
+	var back := Vector3(sin(_orbit_yaw), 0.0, cos(_orbit_yaw))     # = -forward of the orbit heading
+	var pivot := xf.origin + Vector3.UP * 1.0
+	var want := xf.origin + back * 8.0 + Vector3.UP * 3.6    # above the other (ghosted) karts
+	var space := get_world_3d().direct_space_state if get_world_3d() else null
+	if space:
+		var q := PhysicsRayQueryParameters3D.create(pivot, want, Kart.LAYER_WORLD | Kart.LAYER_WALL)
+		var hit := space.intersect_ray(q)
+		if not hit.is_empty():
+			want = (hit["position"] as Vector3) + (pivot - want).normalized() * 0.5
+	_pos.x = damp(_pos.x, want.x, 3.0, delta)
+	_pos.z = damp(_pos.z, want.z, 3.0, delta)
+	_pos.y = damp(_pos.y, want.y, 3.0, delta)
+	trauma = 0.0
+	fov_kick = 0.0
+	_fov = damp(_fov, 64.0, 2.0, delta)
+	fov = _fov
+	global_position = _pos
+	look_at(pivot, Vector3.UP)

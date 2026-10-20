@@ -52,6 +52,7 @@ var lateral := 0.0          ## signed offset from the centre line, + is right
 var track_index := 0
 var rank := 1
 var finished := false
+var parked := false     ## post-finish: stopped on the run-off, physics off (no jitter)
 var finish_time := 0.0
 var wrong_way_time := 0.0
 var speed_scale := 1.0      ## AI rubber band x personal bias
@@ -212,6 +213,11 @@ func place(at: Transform3D) -> void:
 # main loop
 # ---------------------------------------------------------------------------
 func _physics_process(delta: float) -> void:
+	if parked:
+		speed = 0.0
+		velocity = Vector3.ZERO
+		external = Vector3.ZERO
+		return
 	if controller != null and controller.has_method("compute"):
 		controller.compute(delta)
 	if in_tap and race != null:
@@ -543,7 +549,8 @@ func _handle_collisions() -> void:
 		var n := col.get_normal()
 		var other := col.get_collider()
 		if other is Kart:
-			_bump(other as Kart, n, col.get_position())
+			if not finished and not (other as Kart).finished:
+				_bump(other as Kart, n, col.get_position())
 			continue
 		if absf(n.y) > 0.6:
 			continue
@@ -557,8 +564,8 @@ func _handle_collisions() -> void:
 		if impact > best_impact:
 			best_impact = impact
 			best_n = hn
-	scraping = touching and absf(speed) > 6.0
-	if best_impact <= 0.05:
+	scraping = touching and absf(speed) > 6.0 and not finished
+	if best_impact <= 0.05 or finished:
 		return
 	var tangent := dir - best_n * dir.dot(best_n)
 	if tangent.length_squared() > 0.0001:
@@ -654,6 +661,8 @@ func add_slow(kind: String, amount: float, duration: float) -> void:
 
 ## Returns false when a shield absorbed the hit.
 func hit(kind: String, stun: float, blockable: bool, slow_amt: float = 0.0, slow_dur: float = 0.0) -> bool:
+	if finished:
+		return false    # out of the race: nothing can hit a finished kart
 	if invuln_time > 0.0 or (stun_time > 0.0 and stun > 0.0):
 		return false    # K12: no chain hits while spinning / just recovered
 	if blockable and shield_time > 0.0:
@@ -720,6 +729,18 @@ func respawn_on_track() -> void:
 
 
 ## H8: the player's R key only works while racing, with a 2 s cooldown.
+## Post-finish: ghost the kart (no kart-kart contacts either way), drop any
+## pending effects and stop drifting; the controller then coasts and parks it.
+func on_finished() -> void:
+	collision_layer = 0
+	collision_mask = LAYER_WORLD | LAYER_WALL
+	boosts.clear()
+	slows.clear()
+	stun_time = 0.0
+	if drifting:
+		_end_drift(false)
+
+
 func can_manual_respawn() -> bool:
 	if controls_locked or finished or race == null or not race.is_racing():
 		return false

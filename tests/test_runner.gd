@@ -173,6 +173,49 @@ func _run() -> void:
 			"ai_attack_hold_s": _attack_holds(),
 			"sim_seconds": snappedf(rm.race_time, 0.1)})
 
+	# 7. post-finish: 10 s after the results appear, finished karts must coast
+	# and park cleanly - no walls, no kart-kart contacts, no jitter
+	var fin: Array = rm.karts.filter(func(k): return k.finished)
+	var wall0: Array = fin.map(func(k): return k.stat_wall_hits)
+	var bump0: Array = fin.map(func(k): return k.stat_bumps)
+	var prev: Array = fin.map(func(k): return k.global_position)
+	var prev2: Array = prev.duplicate()
+	var max_jerk := 0.0
+	var min_pair := 99.0
+	var max_lat := 0.0
+	var cam: Camera3D = race.get_node("Camera") if race.has_node("Camera") else get_viewport().get_camera_3d()
+	var min_cam := 99.0
+	for f_i in 600:
+		await get_tree().physics_frame
+		for i in fin.size():
+			var k: Kart = fin[i]
+			var pnow: Vector3 = k.global_position
+			if f_i >= 2:
+				max_jerk = maxf(max_jerk, (pnow - 2.0 * prev[i] + prev2[i]).length())
+			prev2[i] = prev[i]
+			prev[i] = pnow
+			max_lat = maxf(max_lat, absf(k.lateral))
+			for j in range(i + 1, fin.size()) if f_i > 480 else []:
+				min_pair = minf(min_pair, pnow.distance_to(fin[j].global_position))
+		if cam and player.finished:
+			min_cam = minf(min_cam, cam.global_position.distance_to(player.global_position))
+	if OS.get_cmdline_user_args().has("--coast-debug"):
+		for k in fin:
+			print("END %s parked=%s s=%.1f sp=%.2f lat=%.2f" % [k.name, k.parked, k.progress, k.speed, k.lateral])
+	var walls_after: int = 0
+	var bumps_after: int = 0
+	for i in fin.size():
+		walls_after += fin[i].stat_wall_hits - int(wall0[i])
+		bumps_after += fin[i].stat_bumps - int(bump0[i])
+	var parked: int = fin.filter(func(k): return k.parked).size()
+	# late finishers may still be cruising down the run-off - smoothly, at <= cruise speed
+	var settled: int = fin.filter(func(k): return k.parked or absf(k.speed) <= AIDriver.COAST_CRUISE + 0.5).size()
+	_check("post_finish_settles", fin.size() >= 2 and walls_after == 0 and bumps_after == 0 and max_jerk < 0.02 \
+			and min_pair > 1.5 and max_lat < rm.track.road_width * 0.5 - 1.0 and settled == fin.size() and parked >= 1 and min_cam > 2.0,
+			{"finished_karts": fin.size(), "parked": parked, "settled": settled, "wall_hits_after": walls_after, "bumps_after": bumps_after,
+			"max_jerk_m_per_frame2": snappedf(max_jerk, 0.0001), "min_pair_dist_m": snappedf(min_pair, 0.01),
+			"max_abs_lateral_m": snappedf(max_lat, 0.01), "min_camera_dist_m": snappedf(min_cam, 0.01)})
+
 	var all_ok: bool = results.all(func(r): return r.pass)
 	var f := FileAccess.open("res://tests/test_results.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify({"godot": Engine.get_version_info().string, "all_pass": all_ok, "results": results}, "  "))
