@@ -287,7 +287,7 @@
       "detail": {
         "ai_ahead_m": 20.5,
         "ai_hit": true,
-        "ai_to_peel_m": 3.5,
+        "ai_to_peel_m": 3.6,
         "landed_ahead_m": 24.0,
         "thrower_hit": false
       },
@@ -311,8 +311,8 @@
     },
     {
       "detail": {
-        "dust": 21,
-        "dust_in_1s_straight": 8,
+        "dust": 20,
+        "dust_in_1s_straight": 7,
         "flames": 16,
         "landing_dust": 1,
         "skid_quads": 34,
@@ -358,6 +358,18 @@
       },
       "pass": true,
       "test": "t_v_rubber_band"
+    },
+    {
+      "detail": {
+        "ai_rank": 2,
+        "attack_hold_s": 4.08,
+        "lightning_used_in_8s_from_rank": false,
+        "missile_fired_after_s": -1.0,
+        "rank_at_give": 2,
+        "slots_filled_first": true
+      },
+      "pass": true,
+      "test": "t_w_ai_item_timing"
     }
   ]
 }

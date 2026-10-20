@@ -33,6 +33,8 @@ var _double_pending := false
 var _double_at := 0.2
 var _item_delay := -1.0
 var _item_hold := 0.0
+var _attack_hold := 3.0
+var stat_item_holds: Array = []    ## [[item, seconds held]] (A8)
 var _drift_cooldown := 0.0
 var _want_drift := false
 var _start_tap_at := -1.0
@@ -116,7 +118,9 @@ func compute(delta: float) -> void:
 	var look := clampf(0.8 * sp, 12.0, 28.0)    # A5: 0.8 s of travel (was 8-15 m)
 	if kart.cloud_time > 0.0:
 		look *= 0.5        # I8: blinded by ink - shorter look-ahead
-	var ahead := _min_radius(track, s, look + 10.0)
+	# corner lookup keeps its old 18-25 m reach: with the longer A5 look-ahead it
+	# saw corners everywhere and the box-seeking branch below almost never ran
+	var ahead := _min_radius(track, s, clampf(0.6 * sp, 8.0, 15.0) + 10.0)
 	var lane := lane_offset
 	var lane_rate := 3.0
 	if ahead.x < 45.0:
@@ -285,6 +289,8 @@ func _decide_item(delta: float, r_ahead: float) -> bool:
 		return false
 	if _item_delay < 0.0:
 		_item_delay = _rng.randf_range(0.3, 0.8)   # reaction delay
+		# A8: attack items are held 2-6 s first (aggressive drivers less)
+		_attack_hold = _rng.randf_range(2.0, 6.0) * (1.2 - 0.4 * aggression)
 		return false
 	if _item_delay > 0.0:
 		_item_delay = maxf(0.0, _item_delay - delta)
@@ -305,13 +311,19 @@ func _decide_item(delta: float, r_ahead: float) -> bool:
 		ItemDefs.NITRO:
 			use = straight_ahead and kart.grounded
 		ItemDefs.MISSILE:
-			use = gap_ahead < 110.0
+			# A8: wait, then fire when the target is cornering or airborne (or waited long)
+			if gap_ahead < 110.0 and _item_hold >= _attack_hold:
+				var tgt_corner := _min_radius(kart.track, ahead.progress, 15.0).x < 60.0
+				use = tgt_corner or not ahead.grounded or _item_hold > _attack_hold + 3.0
 		ItemDefs.MAGNET:
-			use = gap_ahead < 70.0 and gap_ahead > 5.0
+			use = gap_ahead < 70.0 and gap_ahead > 5.0 and _item_hold >= _attack_hold * 0.5
 		ItemDefs.UFO:
-			use = not leading
+			use = not leading and _item_hold >= _attack_hold
 		ItemDefs.LIGHTNING:
-			use = kart.rank >= 3 or (not leading and _rng.randf() < 0.02)
+			# A8: only from 4th or worse and well behind the leader
+			var leader: Kart = rm.leader() if rm.has_method("leader") else null
+			var behind_leader: float = 0.0 if leader == null else leader.progress - kart.progress
+			use = _item_hold >= _attack_hold and kart.rank >= 4 and behind_leader > 60.0
 		ItemDefs.BANANA when gap_ahead > 12.0 and gap_ahead < 30.0 and aggression > 0.5:
 			use = true
 			_aim_fwd = true        # I8: aggressive drivers lob it at the kart ahead
@@ -333,11 +345,12 @@ func _decide_item(delta: float, r_ahead: float) -> bool:
 				_shield_wait = -1.0
 				use = leading and gap_behind < 25.0 and _rng.randf() < defense * 0.04
 	# defensive drivers hold attack items longer, aggressive ones fire sooner
-	if not use and _item_hold > 9.0 + 8.0 * defense:
+	if not use and _item_hold > 9.0 + 8.0 * defense and not (item == ItemDefs.LIGHTNING and kart.rank < 4):
 		use = true
 	if not use and kart.items.size() >= Kart.MAX_ITEMS and _item_hold > 5.0:
 		use = true
 	if use:
+		stat_item_holds.append([item, snappedf(_item_hold, 0.01)])
 		_item_delay = -1.0
 		_item_hold = 0.0
 	return use

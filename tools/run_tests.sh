@@ -17,7 +17,7 @@ for s in $SEEDS; do
   fin=$(echo "$out" | grep -o '"player_finish":"[^"]*"' | head -1)
   res=$(echo "$out" | grep -o '"results":\[[^]]*\]' | head -1)
   res="$res $(echo "$out" | grep -o '"landing_boosts_by_kart":\[[^]]*\]' | head -1)"
-  res="$res $(echo "$out" | grep -o '"ai_wall_hits":\[[^]]*\]' | head -1) $(echo "$out" | grep -o '"ai_steer_jitter_per_s":\[[^]]*\]' | head -1)"
+  res="$res $(echo "$out" | grep -o '"ai_wall_hits":\[[^]]*\]' | head -1) $(echo "$out" | grep -o '"ai_steer_jitter_per_s":\[[^]]*\]' | head -1) $(echo "$out" | grep -o '"ai_attack_hold_s":\[[^]]*\]' | head -1)"
   if echo "$out" | grep -q "^ALL PASS"; then echo "seed $s: ALL PASS $fin $res"; else echo "seed $s: FAILED"; echo "$fails"; fail=1; fi
 done
 [ $fail = 0 ] && echo "== EVERYTHING PASSED" || echo "== FAILURES"

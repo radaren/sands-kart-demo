@@ -1075,3 +1075,48 @@ func t_v_rubber_band() -> Dictionary:
 	out["all_target_gaps"] = gaps
 	out["pass"] = cases["0"] == 1.0 and cases["-300"] == 1.08 and cases["300"] == 0.92 and out["near_finish_far_behind"] < 1.02
 	return out
+
+
+## A8: the AI holds a missile on a straight instead of firing at once, and does
+## not cast lightning from 2nd place.
+func t_w_ai_item_timing() -> Dictionary:
+	await _until_racing()
+	await _clear_items()
+	var ai := _ai(2)
+	var drv := ai.get_node("AIDriver") as AIDriver
+	var out := {}
+	# lightning from a high rank: put the AI first-ish
+	_stage(ai, 1800.0, 22.0)
+	ai.items.clear()
+	await _frames(30)        # let the ranking catch up with the teleport
+	out["rank_at_give"] = ai.rank
+	ai.items.append(ItemDefs.LIGHTNING)
+	var used_light := false
+	var slots_filled := false     # a full inventory is dumped after 5 s - legit
+	for i in 8 * 60:
+		await _frames(1)
+		if ai.items.size() >= Kart.MAX_ITEMS:
+			slots_filled = true
+		if ai.items.is_empty() or ai.items[0] != ItemDefs.LIGHTNING:
+			used_light = not slots_filled
+			break
+	out["ai_rank"] = ai.rank
+	out["lightning_used_in_8s_from_rank"] = used_light
+	out["slots_filled_first"] = slots_filled
+	ai.items.clear()
+	await _frames(2)
+	# missile: earliest use time
+	ai.items.clear()
+	ai.items.append(ItemDefs.MISSILE)
+	var t0 := rm.race_clock
+	var fired_after := -1.0
+	for i in 12 * 60:
+		await _frames(1)
+		if ai.items.is_empty():
+			fired_after = rm.race_clock - t0
+			break
+	out["missile_fired_after_s"] = snappedf(fired_after, 0.01)
+	out["attack_hold_s"] = snappedf(drv._attack_hold, 0.01)
+	await _clear_items()
+	out["pass"] = (not used_light or ai.rank >= 4) and (fired_after < 0.0 or fired_after >= 1.5)
+	return out

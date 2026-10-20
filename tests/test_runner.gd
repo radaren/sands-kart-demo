@@ -170,6 +170,7 @@ func _run() -> void:
 			"landing_boosts_by_kart": rm.karts.map(func(k): return "%d/%d" % [k.stat_landing_boosts, k.stat_launches]), "items_used_total": rm.item_system.used_log.size(),
 			"ai_wall_hits": rm.karts.filter(func(k): return not k.is_player).map(func(k): return k.stat_wall_hits),
 			"ai_steer_jitter_per_s": rm.karts.filter(func(k): return not k.is_player).map(func(k): var a = k.get_node("AIDriver"); return snappedf(a.stat_steer_jitter / maxf(a.stat_ticks, 1) * 60.0, 0.01)),
+			"ai_attack_hold_s": _attack_holds(),
 			"sim_seconds": snappedf(rm.race_time, 0.1)})
 
 	var all_ok: bool = results.all(func(r): return r.pass)
@@ -178,3 +179,21 @@ func _run() -> void:
 	f.close()
 	print("ALL PASS" if all_ok else "SOME FAILED")
 	get_tree().quit(0 if all_ok else 1)
+
+
+## A8: min / mean seconds the AI held attack items before using them
+func _attack_holds() -> Array:
+	var hs := []
+	for k in rm.karts:
+		var a := k.get_node_or_null("AIDriver") as AIDriver
+		if a == null or k.is_player:
+			continue
+		for h in a.stat_item_holds:
+			if h[0] in [ItemDefs.MISSILE, ItemDefs.UFO, ItemDefs.LIGHTNING]:
+				hs.append(float(h[1]))
+	if hs.is_empty():
+		return []
+	var tot := 0.0
+	for h in hs:
+		tot += h
+	return [hs.size(), snappedf(hs.min(), 0.01), snappedf(tot / hs.size(), 0.01)]
